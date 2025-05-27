@@ -1,0 +1,147 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./pos-honduras.db"
+}
+
+model Producto {
+  id          Int           @id @default(autoincrement())
+  codigo      String        @unique
+  nombre      String
+  descripcion String?
+  precio      Float
+  categoria   String
+  activo      Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relaciones
+  pedidoItems PedidoItem[]
+  
+  @@map("productos")
+}
+
+model Mesa {
+  id          Int         @id @default(autoincrement())
+  numero      Int         @unique
+  capacidad   Int         @default(4)
+  estado      String      @default("libre") // libre, ocupada, reservada
+  activa      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // Relaciones
+  pedidos     Pedido[]
+  reservas    Reserva[]
+  
+  @@map("mesas")
+}
+
+model Pedido {
+  id            Int           @id @default(autoincrement())
+  numero        String        @unique
+  tipo          String        // mesa, delivery, pickup, barra
+  estado        String        @default("abierto") // abierto, cerrado, cancelado
+  mesaId        Int?
+  clienteNombre String?
+  clienteTelefono String?
+  subtotal      Float         @default(0)
+  descuento     Float         @default(0)
+  impuestos     Float         @default(0)
+  total         Float         @default(0)
+  medioPago     String?
+  direccion     String?       // Para delivery
+  proveedor     String?       // Para delivery (PROPIO, UBER_EATS, etc)
+  fechaCreacion DateTime      @default(now())
+  fechaCierre   DateTime?
+  usuarioId     Int?
+  
+  // Relaciones
+  mesa          Mesa?         @relation(fields: [mesaId], references: [id])
+  usuario       Usuario?      @relation(fields: [usuarioId], references: [id])
+  items         PedidoItem[]
+  
+  @@map("pedidos")
+}
+
+model PedidoItem {
+  id            Int       @id @default(autoincrement())
+  pedidoId      Int
+  productoId    Int
+  cantidad      Int
+  precioUnitario Float
+  subtotal      Float
+  notas         String?
+  createdAt     DateTime  @default(now())
+  
+  // Relaciones
+  pedido        Pedido    @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto      Producto  @relation(fields: [productoId], references: [id])
+  
+  @@map("pedido_items")
+}
+
+model Reserva {
+  id            Int       @id @default(autoincrement())
+  mesaId        Int
+  fecha         String    // YYYY-MM-DD
+  hora          String    // HH:MM
+  duracion      Int       @default(90) // minutos
+  clienteNombre String
+  clienteTelefono String
+  comentarios   String?
+  estado        String    @default("confirmada") // confirmada, pendiente, cancelada
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relaciones
+  mesa          Mesa      @relation(fields: [mesaId], references: [id])
+  
+  @@map("reservas")
+}
+
+model Usuario {
+  id            Int       @id @default(autoincrement())
+  nombre        String
+  email         String    @unique
+  password      String
+  rol           String    @default("cajero") // admin, gerente, cajero, mesero
+  activo        Boolean   @default(true)
+  ultimoLogin   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relaciones
+  pedidos       Pedido[]
+  
+  @@map("usuarios")
+}
+
+model Configuracion {
+  id        Int      @id @default(autoincrement())
+  clave     String   @unique
+  valor     String
+  tipo      String   @default("string") // string, number, boolean, json
+  updatedAt DateTime @updatedAt
+  
+  @@map("configuracion")
+}
+
+model VentaDiaria {
+  id            Int      @id @default(autoincrement())
+  fecha         String   @unique // YYYY-MM-DD
+  totalVentas   Float    @default(0)
+  totalPedidos  Int      @default(0)
+  totalItems    Int      @default(0)
+  promedioTicket Float   @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("ventas_diarias")
+} 
