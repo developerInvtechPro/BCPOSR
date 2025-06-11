@@ -7,6 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "seed": "node scripts/seed-demo-data.js",
+    "verify": "node scripts/verify-demo-data.js",
+    "test-improvements": "node scripts/test-improvements.js",
+    "setup-db": "node scripts/setup-database-optimization.js",
     "backup:setup": "bash scripts/setup-backup-cloud.sh",
     "backup:google": "bash scripts/backup-google-drive.sh",
     "backup:onedrive": "bash scripts/backup-onedrive.sh",
@@ -18,6 +22,11 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "node prisma/seed.js",
+    "db:setup-users": "node scripts/setup-database-optimization.js",
+    "db:optimize": "psql -d pos_honduras -f scripts/setup-database-users.sql",
+    "db:verify-users": "psql -d pos_honduras -c \"SELECT rolname as usuario, rolcanlogin as puede_login, rolconnlimit as limite_conexiones FROM pg_roles WHERE rolname LIKE 'pos_%' ORDER BY rolname;\"",
+    "db:verify-indexes": "psql -d pos_honduras -c \"SELECT tablename, indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname LIKE 'idx_%' ORDER BY tablename, indexname;\"",
+    "db:stats": "psql -d pos_honduras -c \"SELECT schemaname, tablename, n_tup_ins as inserciones, n_tup_upd as actualizaciones, n_tup_del as eliminaciones FROM pg_stat_user_tables ORDER BY tablename;\"",
     "bc:test": "node scripts/test-bc-connection.js",
     "bc:test-postman": "node scripts/test-bc-connection-detailed.js",
     "bc:resumen": "node scripts/test-configuracion-completa.js",
@@ -29,28 +38,28 @@
     "version": "echo 'Sistema POS Honduras v1.0.0 - Build $(date +%Y%m%d)'"
   },
   "dependencies": {
-    "next": "14.1.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "@mui/material": "^5.15.0",
-    "@mui/icons-material": "^5.15.0",
     "@emotion/react": "^11.11.0",
     "@emotion/styled": "^11.11.0",
-    "axios": "^1.6.0",
-    "react-query": "^3.39.3",
-    "next-auth": "^4.24.0",
-    "typescript": "^5.3.0",
-    "@types/react": "^18.2.0",
+    "@mui/icons-material": "^5.15.0",
+    "@mui/material": "^5.15.0",
+    "@prisma/client": "^5.22.0",
     "@types/node": "^20.0.0",
-    "prisma": "^5.7.0",
-    "@prisma/client": "^5.7.0",
+    "@types/react": "^18.2.0",
+    "axios": "^1.6.0",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "next": "14.1.0",
+    "next-auth": "^4.24.0",
+    "prisma": "^5.22.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-query": "^3.39.3",
+    "typescript": "^5.3.0"
   },
   "devDependencies": {
-    "eslint": "^8.56.0",
-    "eslint-config-next": "14.1.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0"
+    "eslint": "^8.56.0",
+    "eslint-config-next": "14.1.0"
   }
-} 
+}

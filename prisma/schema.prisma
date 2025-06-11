@@ -6,9 +6,13 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./pos-honduras.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
+
+// =====================================================
+// TABLAS EXISTENTES DEL SISTEMA POS
+// =====================================================
 
 model Producto {
   id          Int           @id @default(autoincrement())
@@ -144,4 +148,555 @@ model VentaDiaria {
   updatedAt     DateTime @updatedAt
   
   @@map("ventas_diarias")
+}
+
+// =====================================================
+// TABLAS DE INVENTARIO COMPATIBLES CON BUSINESS CENTRAL
+// =====================================================
+
+// Tabla principal de artículos (Items en BC)
+model Item {
+  id                    Int                 @id @default(autoincrement())
+  no                    String              @unique // No. en BC
+  description           String              // Description
+  description2          String?             // Description 2
+  baseUnitOfMeasure     String              @default("PCS") // Base Unit of Measure
+  type                  String              @default("Inventory") // Inventory, Non-Inventory, Service
+  inventoryPostingGroup String?             // Inventory Posting Group
+  genProdPostingGroup   String?             // Gen. Prod. Posting Group
+  taxGroupCode          String?             // Tax Group Code
+  vatProdPostingGroup   String?             // VAT Prod. Posting Group
+  unitPrice             Float               @default(0) // Unit Price
+  unitCost              Float               @default(0) // Unit Cost
+  lastDirectCost        Float               @default(0) // Last Direct Cost
+  standardCost          Float               @default(0) // Standard Cost
+  costingMethod         String              @default("Average") // FIFO, LIFO, Specific, Average, Standard
+  replenishmentSystem   String              @default("Purchase") // Purchase, Prod. Order, Assembly
+  reorderPoint          Float               @default(0) // Reorder Point
+  maximumInventory      Float               @default(0) // Maximum Inventory
+  minimumOrderQty       Float               @default(0) // Minimum Order Quantity
+  maximumOrderQty       Float               @default(0) // Maximum Order Quantity
+  safetyStockQty        Float               @default(0) // Safety Stock Quantity
+  orderMultiple         Float               @default(1) // Order Multiple
+  shelfNo               String?             // Shelf No.
+  blocked               Boolean             @default(false) // Blocked
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  // Relaciones
+  itemLedgerEntries     ItemLedgerEntry[]
+  valueEntries          ValueEntry[]
+  bomComponents         BOMComponent[]      @relation("ParentItem")
+  bomParents            BOMComponent[]      @relation("ComponentItem")
+  purchaseLines         PurchaseLine[]
+  salesLines            SalesLine[]
+  itemJournalLines      ItemJournalLine[]
+  
+  @@map("items")
+}
+
+// Movimientos de inventario (Item Ledger Entry en BC)
+model ItemLedgerEntry {
+  id                    Int                 @id @default(autoincrement())
+  entryNo               Int                 @unique @default(autoincrement()) // Entry No.
+  itemNo                String              // Item No.
+  postingDate           DateTime            // Posting Date
+  entryType             String              // Entry Type: Purchase, Sale, Positive Adjmt., Negative Adjmt., Transfer, Consumption, Output
+  sourceNo              String?             // Source No. (Vendor, Customer, etc.)
+  documentNo            String              // Document No.
+  description           String?             // Description
+  locationCode          String              @default("MAIN") // Location Code
+  quantity              Float               // Quantity
+  remainingQuantity     Float               // Remaining Quantity
+  invoicedQuantity      Float               @default(0) // Invoiced Quantity
+  unitOfMeasureCode     String              @default("PCS") // Unit of Measure Code
+  salesAmountActual     Float               @default(0) // Sales Amount (Actual)
+  costAmountActual      Float               @default(0) // Cost Amount (Actual)
+  costAmountExpected    Float               @default(0) // Cost Amount (Expected)
+  costAmountNonInvtbl   Float               @default(0) // Cost Amount (Non-Invtbl.)
+  completelyInvoiced    Boolean             @default(false) // Completely Invoiced
+  open                  Boolean             @default(true) // Open
+  appliedEntryToAdjust  Int?                // Applied Entry to Adjust
+  globalDimension1Code  String?             // Global Dimension 1 Code
+  globalDimension2Code  String?             // Global Dimension 2 Code
+  createdAt             DateTime            @default(now())
+  
+  // Relaciones
+  item                  Item                @relation(fields: [itemNo], references: [no])
+  valueEntries          ValueEntry[]
+  
+  @@map("item_ledger_entries")
+}
+
+// Movimientos de valor (Value Entry en BC)
+model ValueEntry {
+  id                    Int                 @id @default(autoincrement())
+  entryNo               Int                 @unique @default(autoincrement()) // Entry No.
+  itemLedgerEntryNo     Int                 // Item Ledger Entry No.
+  itemNo                String              // Item No.
+  postingDate           DateTime            // Posting Date
+  itemLedgerEntryType   String              // Item Ledger Entry Type
+  sourceNo              String?             // Source No.
+  documentNo            String              // Document No.
+  description           String?             // Description
+  locationCode          String              @default("MAIN") // Location Code
+  inventoryPostingGroup String?             // Inventory Posting Group
+  sourcePostingGroup    String?             // Source Posting Group
+  itemChargeNo          String?             // Item Charge No.
+  valuedQuantity        Float               // Valued Quantity
+  itemLedgerEntryQty    Float               // Item Ledger Entry Quantity
+  invoicedQuantity      Float               @default(0) // Invoiced Quantity
+  costAmountActual      Float               @default(0) // Cost Amount (Actual)
+  costAmountExpected    Float               @default(0) // Cost Amount (Expected)
+  costAmountNonInvtbl   Float               @default(0) // Cost Amount (Non-Invtbl.)
+  salesAmountActual     Float               @default(0) // Sales Amount (Actual)
+  salesAmountExpected   Float               @default(0) // Sales Amount (Expected)
+  discountAmount        Float               @default(0) // Discount Amount
+  costPerUnit           Float               @default(0) // Cost per Unit
+  sourceCode            String?             // Source Code
+  adjusts               Boolean             @default(false) // Adjusts
+  appliedEntryToAdjust  Int?                // Applied Entry to Adjust
+  globalDimension1Code  String?             // Global Dimension 1 Code
+  globalDimension2Code  String?             // Global Dimension 2 Code
+  createdAt             DateTime            @default(now())
+  
+  // Relaciones
+  item                  Item                @relation(fields: [itemNo], references: [no])
+  itemLedgerEntry       ItemLedgerEntry     @relation(fields: [itemLedgerEntryNo], references: [entryNo])
+  
+  @@map("value_entries")
+}
+
+// Lista de materiales (BOM - Bill of Materials en BC)
+model BOMComponent {
+  id                    Int                 @id @default(autoincrement())
+  parentItemNo          String              // Parent Item No.
+  lineNo                Int                 // Line No.
+  type                  String              @default("Item") // Item, Resource
+  no                    String              // No. (Component Item No.)
+  description           String?             // Description
+  unitOfMeasureCode     String              @default("PCS") // Unit of Measure Code
+  quantityPer           Float               // Quantity per
+  unitCost              Float               @default(0) // Unit Cost
+  scrapPct              Float               @default(0) // Scrap %
+  variantCode           String?             // Variant Code
+  startingDate          DateTime?           // Starting Date
+  endingDate            DateTime?           // Ending Date
+  position              String?             // Position
+  position2             String?             // Position 2
+  position3             String?             // Position 3
+  machineNo             String?             // Machine No.
+  leadTimeOffset        String?             // Lead Time Offset
+  resourceUsageType     String?             // Resource Usage Type
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  // Relaciones
+  parentItem            Item                @relation("ParentItem", fields: [parentItemNo], references: [no])
+  componentItem         Item?               @relation("ComponentItem", fields: [no], references: [no])
+  
+  @@unique([parentItemNo, lineNo])
+  @@map("bom_components")
+}
+
+// Órdenes de compra (Purchase Header en BC)
+model PurchaseHeader {
+  id                    Int                 @id @default(autoincrement())
+  documentType          String              @default("Order") // Quote, Order, Invoice, Credit Memo, Blanket Order, Return Order
+  no                    String              @unique // No.
+  buyFromVendorNo       String              // Buy-from Vendor No.
+  buyFromVendorName     String              // Buy-from Vendor Name
+  buyFromAddress        String?             // Buy-from Address
+  buyFromCity           String?             // Buy-from City
+  buyFromContact        String?             // Buy-from Contact
+  orderDate             DateTime            @default(now()) // Order Date
+  postingDate           DateTime            @default(now()) // Posting Date
+  expectedReceiptDate   DateTime?           // Expected Receipt Date
+  dueDate               DateTime?           // Due Date
+  vendorOrderNo         String?             // Vendor Order No.
+  vendorShipmentNo      String?             // Vendor Shipment No.
+  vendorInvoiceNo       String?             // Vendor Invoice No.
+  paymentTermsCode      String?             // Payment Terms Code
+  paymentMethodCode     String?             // Payment Method Code
+  shortcutDimension1Code String?            // Shortcut Dimension 1 Code
+  shortcutDimension2Code String?            // Shortcut Dimension 2 Code
+  vendorPostingGroup    String?             // Vendor Posting Group
+  currencyCode          String              @default("HNL") // Currency Code
+  currencyFactor        Float               @default(1) // Currency Factor
+  pricesIncludingVAT    Boolean             @default(false) // Prices Including VAT
+  invoiceDiscountCalculation String         @default("None") // Invoice Discount Calculation
+  invoiceDiscountValue  Float               @default(0) // Invoice Discount Value
+  status                String              @default("Open") // Open, Released, Pending Approval, Pending Prepayment
+  amount                Float               @default(0) // Amount
+  amountIncludingVAT    Float               @default(0) // Amount Including VAT
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  // Relaciones
+  vendor                Vendor              @relation(fields: [buyFromVendorNo], references: [no])
+  purchaseLines         PurchaseLine[]
+  
+  @@map("purchase_headers")
+}
+
+// Líneas de órdenes de compra (Purchase Line en BC)
+model PurchaseLine {
+  id                    Int                 @id @default(autoincrement())
+  documentType          String              // Document Type
+  documentNo            String              // Document No.
+  lineNo                Int                 // Line No.
+  type                  String              @default("Item") // G/L Account, Item, Resource, Fixed Asset, Charge (Item)
+  no                    String              // No.
+  locationCode          String              @default("MAIN") // Location Code
+  description           String?             // Description
+  description2          String?             // Description 2
+  unitOfMeasureCode     String              @default("PCS") // Unit of Measure Code
+  quantity              Float               // Quantity
+  outstandingQuantity   Float               // Outstanding Quantity
+  qtyToInvoice          Float               @default(0) // Qty. to Invoice
+  qtyToReceive          Float               @default(0) // Qty. to Receive
+  directUnitCost        Float               // Direct Unit Cost
+  unitCostLCY           Float               // Unit Cost (LCY)
+  vatPct                Float               @default(0) // VAT %
+  lineDiscountPct       Float               @default(0) // Line Discount %
+  lineDiscountAmount    Float               @default(0) // Line Discount Amount
+  amount                Float               // Amount
+  amountIncludingVAT    Float               // Amount Including VAT
+  unitPriceLCY          Float               @default(0) // Unit Price (LCY)
+  allowInvoiceDisc      Boolean             @default(true) // Allow Invoice Disc.
+  grossWeight           Float               @default(0) // Gross Weight
+  netWeight             Float               @default(0) // Net Weight
+  unitsPerParcel        Float               @default(0) // Units per Parcel
+  unitVolume            Float               @default(0) // Unit Volume
+  variantCode           String?             // Variant Code
+  binCode               String?             // Bin Code
+  qtyPerUnitOfMeasure   Float               @default(1) // Qty. per Unit of Measure
+  plannedReceiptDate    DateTime?           // Planned Receipt Date
+  expectedReceiptDate   DateTime?           // Expected Receipt Date
+  orderDate             DateTime?           // Order Date
+  leadTimeCalculation   String?             // Lead Time Calculation
+  jobNo                 String?             // Job No.
+  indirectCostPct       Float               @default(0) // Indirect Cost %
+  recalculateInvoiceDisc Boolean            @default(false) // Recalculate Invoice Disc.
+  outstandingAmount     Float               @default(0) // Outstanding Amount
+  qtyRcdNotInvoiced     Float               @default(0) // Qty. Rcd. Not Invoiced
+  amtRcdNotInvoiced     Float               @default(0) // Amt. Rcd. Not Invoiced
+  quantityReceived      Float               @default(0) // Quantity Received
+  quantityInvoiced      Float               @default(0) // Quantity Invoiced
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  // Relaciones
+  purchaseHeader        PurchaseHeader      @relation(fields: [documentNo], references: [no])
+  item                  Item?               @relation(fields: [no], references: [no])
+  
+  @@unique([documentNo, lineNo])
+  @@map("purchase_lines")
+}
+
+// Proveedores (Vendor en BC)
+model Vendor {
+  id                    Int                 @id @default(autoincrement())
+  no                    String              @unique // No.
+  name                  String              // Name
+  name2                 String?             // Name 2
+  address               String?             // Address
+  address2              String?             // Address 2
+  city                  String?             // City
+  contact               String?             // Contact
+  phoneNo               String?             // Phone No.
+  telexNo               String?             // Telex No.
+  ourAccountNo          String?             // Our Account No.
+  territoryCode         String?             // Territory Code
+  globalDimension1Code  String?             // Global Dimension 1 Code
+  globalDimension2Code  String?             // Global Dimension 2 Code
+  budgetedAmount        Float               @default(0) // Budgeted Amount
+  vendorPostingGroup    String?             // Vendor Posting Group
+  currencyCode          String              @default("HNL") // Currency Code
+  languageCode          String?             // Language Code
+  statisticsGroup       Int                 @default(0) // Statistics Group
+  paymentTermsCode      String?             // Payment Terms Code
+  finChargeTermsCode    String?             // Fin. Charge Terms Code
+  purchaserCode         String?             // Purchaser Code
+  shipmentMethodCode    String?             // Shipment Method Code
+  shippingAgentCode     String?             // Shipping Agent Code
+  invoiceDiscCode       String?             // Invoice Disc. Code
+  countryRegionCode     String?             // Country/Region Code
+  blocked               String              @default("") // Blocked: "", Payment, All
+  payToVendorNo         String?             // Pay-to Vendor No.
+  priority              Int                 @default(0) // Priority
+  paymentMethodCode     String?             // Payment Method Code
+  lastModifiedDateTime  DateTime            @default(now()) // Last Modified Date Time
+  lastDateModified      DateTime            @default(now()) // Last Date Modified
+  dateFilter            DateTime?           // Date Filter
+  globalDimension1Filter String?            // Global Dimension 1 Filter
+  globalDimension2Filter String?            // Global Dimension 2 Filter
+  balance               Float               @default(0) // Balance
+  balanceLCY            Float               @default(0) // Balance (LCY)
+  netChange             Float               @default(0) // Net Change
+  netChangeLCY          Float               @default(0) // Net Change (LCY)
+  salesLCY              Float               @default(0) // Sales (LCY)
+  profitLCY             Float               @default(0) // Profit (LCY)
+  invDiscountsLCY       Float               @default(0) // Inv. Discounts (LCY)
+  pmtDiscountsLCY       Float               @default(0) // Pmt. Discounts (LCY)
+  pmtToleranceLCY       Float               @default(0) // Pmt. Tolerance (LCY)
+  outstandingOrdersLCY  Float               @default(0) // Outstanding Orders (LCY)
+  amtRcdNotInvoicedLCY  Float               @default(0) // Amt. Rcd. Not Invoiced (LCY)
+  applicationMethod     String              @default("Manual") // Application Method
+  pricesIncludingVAT    Boolean             @default(false) // Prices Including VAT
+  faxNo                 String?             // Fax No.
+  telexAnswerBack       String?             // Telex Answer Back
+  vatRegistrationNo     String?             // VAT Registration No.
+  genBusPostingGroup    String?             // Gen. Bus. Posting Group
+  picture               String?             // Picture
+  postCode              String?             // Post Code
+  county                String?             // County
+  email                 String?             // E-Mail
+  homePage              String?             // Home Page
+  reminderTermsCode     String?             // Reminder Terms Code
+  noSeries              String?             // No. Series
+  taxAreaCode           String?             // Tax Area Code
+  taxLiable             Boolean             @default(true) // Tax Liable
+  vatBusPostingGroup    String?             // VAT Bus. Posting Group
+  currencyFilter        String?             // Currency Filter
+  outstandingInvoicesLCY Float              @default(0) // Outstanding Invoices (LCY)
+  outstandingInvoices   Float               @default(0) // Outstanding Invoices
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  // Relaciones
+  purchaseHeaders       PurchaseHeader[]
+  
+  @@map("vendors")
+}
+
+// Diario de artículos (Item Journal Line en BC)
+model ItemJournalLine {
+  id                    Int                 @id @default(autoincrement())
+  journalTemplateName   String              // Journal Template Name
+  journalBatchName      String              // Journal Batch Name
+  lineNo                Int                 // Line No.
+  itemNo                String              // Item No.
+  postingDate           DateTime            @default(now()) // Posting Date
+  entryType             String              // Entry Type: Purchase, Sale, Positive Adjmt., Negative Adjmt., Transfer, Consumption, Output
+  sourceNo              String?             // Source No.
+  documentNo            String?             // Document No.
+  description           String?             // Description
+  locationCode          String              @default("MAIN") // Location Code
+  binCode               String?             // Bin Code
+  salesPersonCode       String?             // Salesperson Code
+  genBusPostingGroup    String?             // Gen. Bus. Posting Group
+  genProdPostingGroup   String?             // Gen. Prod. Posting Group
+  quantity              Float               // Quantity
+  unitOfMeasureCode     String              @default("PCS") // Unit of Measure Code
+  qtyPerUnitOfMeasure   Float               @default(1) // Qty. per Unit of Measure
+  unitAmount            Float               @default(0) // Unit Amount
+  unitCost              Float               @default(0) // Unit Cost
+  amount                Float               @default(0) // Amount
+  discountAmount        Float               @default(0) // Discount Amount
+  salesPersonsCommissionPct Float           @default(0) // Salesperson's Commission %
+  reasonCode            String?             // Reason Code
+  globalDimension1Code  String?             // Global Dimension 1 Code
+  globalDimension2Code  String?             // Global Dimension 2 Code
+  shortcutDimension3Code String?            // Shortcut Dimension 3 Code
+  shortcutDimension4Code String?            // Shortcut Dimension 4 Code
+  shortcutDimension5Code String?            // Shortcut Dimension 5 Code
+  shortcutDimension6Code String?            // Shortcut Dimension 6 Code
+  shortcutDimension7Code String?            // Shortcut Dimension 7 Code
+  shortcutDimension8Code String?            // Shortcut Dimension 8 Code
+  indirectCostPct       Float               @default(0) // Indirect Cost %
+  sourceCode            String?             // Source Code
+  systemCreatedEntry    Boolean             @default(false) // System-Created Entry
+  variantCode           String?             // Variant Code
+  binIndex              Int                 @default(0) // Bin Index
+  binTypeCode           String?             // Bin Type Code
+  qtyCalculated         Float               @default(0) // Qty. (Calculated)
+  qtyPhysInventory      Float               @default(0) // Qty. (Phys. Inventory)
+  lastItemLedgerEntryNo Int                 @default(0) // Last Item Ledger Entry No.
+  physInventory         Boolean             @default(false) // Phys. Inventory
+  genPostingType        String?             // Gen. Posting Type
+  appliesToEntry        Int                 @default(0) // Applies-to Entry
+  invoiceToSourceNo     String?             // Invoice-to Source No.
+  appliedEntryToAdjust  Int                 @default(0) // Applied Entry to Adjust
+  posted                Boolean             @default(false) // Posted
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  // Relaciones
+  item                  Item                @relation(fields: [itemNo], references: [no])
+  
+  @@unique([journalTemplateName, journalBatchName, lineNo])
+  @@map("item_journal_lines")
+}
+
+// Ventas (Sales Header en BC)
+model SalesHeader {
+  id                    Int                 @id @default(autoincrement())
+  documentType          String              @default("Order") // Quote, Order, Invoice, Credit Memo, Blanket Order, Return Order
+  no                    String              @unique // No.
+  sellToCustomerNo      String              // Sell-to Customer No.
+  sellToCustomerName    String              // Sell-to Customer Name
+  sellToAddress         String?             // Sell-to Address
+  sellToCity            String?             // Sell-to City
+  sellToContact         String?             // Sell-to Contact
+  orderDate             DateTime            @default(now()) // Order Date
+  postingDate           DateTime            @default(now()) // Posting Date
+  shipmentDate          DateTime?           // Shipment Date
+  dueDate               DateTime?           // Due Date
+  paymentTermsCode      String?             // Payment Terms Code
+  paymentMethodCode     String?             // Payment Method Code
+  shortcutDimension1Code String?            // Shortcut Dimension 1 Code
+  shortcutDimension2Code String?            // Shortcut Dimension 2 Code
+  customerPostingGroup  String?             // Customer Posting Group
+  currencyCode          String              @default("HNL") // Currency Code
+  currencyFactor        Float               @default(1) // Currency Factor
+  pricesIncludingVAT    Boolean             @default(false) // Prices Including VAT
+  invoiceDiscountCalculation String         @default("None") // Invoice Discount Calculation
+  invoiceDiscountValue  Float               @default(0) // Invoice Discount Value
+  status                String              @default("Open") // Open, Released, Pending Approval, Pending Prepayment
+  amount                Float               @default(0) // Amount
+  amountIncludingVAT    Float               @default(0) // Amount Including VAT
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  // Relaciones
+  customer              Customer            @relation(fields: [sellToCustomerNo], references: [no])
+  salesLines            SalesLine[]
+  
+  @@map("sales_headers")
+}
+
+// Líneas de ventas (Sales Line en BC)
+model SalesLine {
+  id                    Int                 @id @default(autoincrement())
+  documentType          String              // Document Type
+  documentNo            String              // Document No.
+  lineNo                Int                 // Line No.
+  type                  String              @default("Item") // G/L Account, Item, Resource, Fixed Asset, Charge (Item)
+  no                    String              // No.
+  locationCode          String              @default("MAIN") // Location Code
+  description           String?             // Description
+  description2          String?             // Description 2
+  unitOfMeasureCode     String              @default("PCS") // Unit of Measure Code
+  quantity              Float               // Quantity
+  outstandingQuantity   Float               // Outstanding Quantity
+  qtyToInvoice          Float               @default(0) // Qty. to Invoice
+  qtyToShip             Float               @default(0) // Qty. to Ship
+  unitPrice             Float               // Unit Price
+  unitPriceLCY          Float               // Unit Price (LCY)
+  vatPct                Float               @default(0) // VAT %
+  lineDiscountPct       Float               @default(0) // Line Discount %
+  lineDiscountAmount    Float               @default(0) // Line Discount Amount
+  amount                Float               // Amount
+  amountIncludingVAT    Float               // Amount Including VAT
+  allowInvoiceDisc      Boolean             @default(true) // Allow Invoice Disc.
+  grossWeight           Float               @default(0) // Gross Weight
+  netWeight             Float               @default(0) // Net Weight
+  unitsPerParcel        Float               @default(0) // Units per Parcel
+  unitVolume            Float               @default(0) // Unit Volume
+  variantCode           String?             // Variant Code
+  binCode               String?             // Bin Code
+  qtyPerUnitOfMeasure   Float               @default(1) // Qty. per Unit of Measure
+  plannedDeliveryDate   DateTime?           // Planned Delivery Date
+  plannedShipmentDate   DateTime?           // Planned Shipment Date
+  shipmentDate          DateTime?           // Shipment Date
+  shippingAgentCode     String?             // Shipping Agent Code
+  shippingAgentServiceCode String?          // Shipping Agent Service Code
+  allowLineDisc         Boolean             @default(true) // Allow Line Disc.
+  customerDiscGroup     String?             // Customer Disc. Group
+  outstandingAmount     Float               @default(0) // Outstanding Amount
+  qtyShippedNotInvoiced Float               @default(0) // Qty. Shipped Not Invoiced
+  shippedNotInvoiced    Float               @default(0) // Shipped Not Invoiced
+  quantityShipped       Float               @default(0) // Quantity Shipped
+  quantityInvoiced      Float               @default(0) // Quantity Invoiced
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  // Relaciones
+  salesHeader           SalesHeader         @relation(fields: [documentNo], references: [no])
+  item                  Item?               @relation(fields: [no], references: [no])
+  
+  @@unique([documentNo, lineNo])
+  @@map("sales_lines")
+}
+
+// Clientes (Customer en BC)
+model Customer {
+  id                    Int                 @id @default(autoincrement())
+  no                    String              @unique // No.
+  name                  String              // Name
+  name2                 String?             // Name 2
+  address               String?             // Address
+  address2              String?             // Address 2
+  city                  String?             // City
+  contact               String?             // Contact
+  phoneNo               String?             // Phone No.
+  email                 String?             // E-Mail
+  homePage              String?             // Home Page
+  countryRegionCode     String?             // Country/Region Code
+  postCode              String?             // Post Code
+  county                String?             // County
+  globalDimension1Code  String?             // Global Dimension 1 Code
+  globalDimension2Code  String?             // Global Dimension 2 Code
+  customerPostingGroup  String?             // Customer Posting Group
+  currencyCode          String              @default("HNL") // Currency Code
+  customerPriceGroup    String?             // Customer Price Group
+  languageCode          String?             // Language Code
+  statisticsGroup       Int                 @default(0) // Statistics Group
+  paymentTermsCode      String?             // Payment Terms Code
+  finChargeTermsCode    String?             // Fin. Charge Terms Code
+  salespersonCode       String?             // Salesperson Code
+  shipmentMethodCode    String?             // Shipment Method Code
+  shippingAgentCode     String?             // Shipping Agent Code
+  placeOfExport         String?             // Place of Export
+  invoiceDiscCode       String?             // Invoice Disc. Code
+  customerDiscGroup     String?             // Customer Disc. Group
+  blocked               String              @default("") // Blocked: "", Ship, Invoice, All
+  invoiceCopies         Int                 @default(1) // Invoice Copies
+  lastStatementNo       Int                 @default(0) // Last Statement No.
+  printStatements       Boolean             @default(true) // Print Statements
+  billToCustomerNo      String?             // Bill-to Customer No.
+  priority              Int                 @default(0) // Priority
+  paymentMethodCode     String?             // Payment Method Code
+  lastModifiedDateTime  DateTime            @default(now()) // Last Modified Date Time
+  lastDateModified      DateTime            @default(now()) // Last Date Modified
+  dateFilter            DateTime?           // Date Filter
+  globalDimension1Filter String?            // Global Dimension 1 Filter
+  globalDimension2Filter String?            // Global Dimension 2 Filter
+  balance               Float               @default(0) // Balance
+  balanceLCY            Float               @default(0) // Balance (LCY)
+  netChange             Float               @default(0) // Net Change
+  netChangeLCY          Float               @default(0) // Net Change (LCY)
+  salesLCY              Float               @default(0) // Sales (LCY)
+  profitLCY             Float               @default(0) // Profit (LCY)
+  invDiscountsLCY       Float               @default(0) // Inv. Discounts (LCY)
+  pmtDiscountsLCY       Float               @default(0) // Pmt. Discounts (LCY)
+  pmtToleranceLCY       Float               @default(0) // Pmt. Tolerance (LCY)
+  outstandingOrdersLCY  Float               @default(0) // Outstanding Orders (LCY)
+  shippedNotInvoicedLCY Float               @default(0) // Shipped Not Invoiced (LCY)
+  applicationMethod     String              @default("Manual") // Application Method
+  pricesIncludingVAT    Boolean             @default(false) // Prices Including VAT
+  locationCode          String              @default("MAIN") // Location Code
+  faxNo                 String?             // Fax No.
+  vatRegistrationNo     String?             // VAT Registration No.
+  combineShipments      Boolean             @default(false) // Combine Shipments
+  genBusPostingGroup    String?             // Gen. Bus. Posting Group
+  picture               String?             // Picture
+  gln                   String?             // GLN
+  useGln                Boolean             @default(false) // Use GLN
+  reminderTermsCode     String?             // Reminder Terms Code
+  noSeries              String?             // No. Series
+  taxAreaCode           String?             // Tax Area Code
+  taxLiable             Boolean             @default(true) // Tax Liable
+  vatBusPostingGroup    String?             // VAT Bus. Posting Group
+  currencyFilter        String?             // Currency Filter
+  outstandingInvoicesLCY Float              @default(0) // Outstanding Invoices (LCY)
+  outstandingInvoices   Float               @default(0) // Outstanding Invoices
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  // Relaciones
+  salesHeaders          SalesHeader[]
+  
+  @@map("customers")
 } 

@@ -33,12 +33,43 @@ Sistema de Punto de Venta completo para restaurantes en Honduras con integració
 
 ## 📦 Instalación
 
-### Prerrequisitos
+### 🪟 Instalación en Windows (Recomendado)
+
+#### Instalación Automática
+1. **Descarga el proyecto** desde GitHub
+2. **Ejecuta el instalador**:
+   - Doble clic en `install-windows.bat` (Command Prompt)
+   - O ejecuta `install-windows.ps1` en PowerShell como Administrador
+3. **Sigue las instrucciones** en pantalla
+4. **Accede al sistema** en `http://localhost:3000`
+
+#### Instalación Manual en Windows
+```cmd
+# 1. Instalar Node.js LTS desde: https://nodejs.org/
+# 2. Instalar Git desde: https://git-scm.com/download/win
+
+# 3. Clonar repositorio
+git clone https://github.com/tu-usuario/sistema-pos-honduras.git
+cd sistema-pos-honduras
+
+# 4. Instalar dependencias
+npm install
+
+# 5. Ejecutar sistema
+npm run dev
+```
+
+📖 **Guía completa**: Ver [INSTALACION-WINDOWS.md](INSTALACION-WINDOWS.md)  
+⚡ **Inicio rápido**: Ver [INICIO-RAPIDO-WINDOWS.md](INICIO-RAPIDO-WINDOWS.md)
+
+### 🐧 Instalación Linux/Mac
+
+#### Prerrequisitos
 - Node.js 18+
 - npm o yarn
 - Git
 
-### Instalación Rápida
+#### Instalación Rápida
 ```bash
 # Clonar repositorio
 git clone https://github.com/tu-usuario/facturacion-app.git
@@ -54,7 +85,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-### Instalación con Docker
+### 🐳 Instalación con Docker
 ```bash
 # Construir imagen
 docker build -t pos-honduras .

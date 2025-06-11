@@ -5,6 +5,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import Head from 'next/head';
+import InventoryManager from '../components/InventoryManager';
 
 const accionesIzquierda = [
   'SUSPENDER VENTA',
@@ -3781,7 +3782,7 @@ export default function Home() {
             />
             
             <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
-              Contraseñas de prueba: "1234" (Cajero) o "admin" (Administrador)
+              Contraseñas de prueba: &quot;1234&quot; (Cajero) o &quot;admin&quot; (Administrador)
             </Typography>
           </Box>
           
@@ -4171,14 +4172,22 @@ export default function Home() {
             onChange={(_, newValue) => setTabSuper(newValue)}
             sx={{ borderBottom: 1, borderColor: 'divider' }}
           >
+            <Tab label="📦 Inventario" />
             <Tab label="🗄️ Backup en la Nube" />
             <Tab label="🏢 Business Central" />
             <Tab label="🔧 Sistema" />
             <Tab label="📊 Estadísticas" />
           </Tabs>
 
-          {/* Tab 0: Backup en la Nube */}
+          {/* Tab 0: Inventario */}
           {tabSuper === 0 && (
+            <Box sx={{ p: 0 }}>
+              <InventoryManager />
+            </Box>
+          )}
+
+          {/* Tab 1: Backup en la Nube */}
+          {tabSuper === 1 && (
             <Box sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom sx={{ color: '#1976d2' }}>
                 ☁️ Configuración de Backup Automático
@@ -4466,8 +4475,8 @@ export default function Home() {
             </Box>
           )}
 
-          {/* Tab 1: Business Central - NUEVA FUNCIONALIDAD EMPRESARIAL */}
-          {tabSuper === 1 && (
+          {/* Tab 2: Business Central - NUEVA FUNCIONALIDAD EMPRESARIAL */}
+          {tabSuper === 2 && (
             <Box sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom sx={{ color: '#1976d2' }}>
                 🏢 Configuración Business Central ERP
@@ -4826,8 +4835,8 @@ export default function Home() {
             </Box>
           )}
 
-          {/* Tab 2: Sistema */}
-          {tabSuper === 2 && (
+          {/* Tab 3: Sistema */}
+          {tabSuper === 3 && (
             <Box sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
                 🔧 Configuración del Sistema
@@ -4881,8 +4890,8 @@ export default function Home() {
             </Box>
           )}
 
-          {/* Tab 3: Estadísticas */}
-          {tabSuper === 3 && (
+          {/* Tab 4: Estadísticas */}
+          {tabSuper === 4 && (
             <Box sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
                 📊 Estadísticas del Sistema
@@ -5218,7 +5227,7 @@ export default function Home() {
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 4 }}>
               <Typography variant="h6" color="text.secondary">
-                Haga clic en "Ejecutar Test" para comenzar
+                Haga clic en &quot;Ejecutar Test&quot; para comenzar
               </Typography>
             </Box>
           )}
