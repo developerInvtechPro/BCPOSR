@@ -387,7 +387,7 @@ export const useComanda = () => {
       <body class="${pedido.prioridad !== 'normal' ? pedido.prioridad : ''} ${pedido.estado === 'cancelado' ? 'cancelado' : ''} ${pedido.estado === 'devuelto' ? 'devuelto' : ''}">
         <div class="header">
           <h2>🍽️ COMANDA DE COCINA</h2>
-          <h3>Sistema POS Honduras</h3>
+          <h3>BCPOS</h3>
         </div>
         
         <div class="pedido-info">

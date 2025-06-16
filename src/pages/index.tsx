@@ -8,15 +8,16 @@ import Head from 'next/head';
 import InventoryManager from '../components/InventoryManager';
 
 const accionesIzquierda = [
+  'DESCUENTO 3ERA/4TA EDAD',
+  'DESCUENTO',
+  'CANCELAR VENTA',
   'SUSPENDER VENTA',
   'LLAMAR VENTA',
   'ANULAR PRODUCTO',
-  'CANCELAR VENTA',
-  'DESCUENTO 3ERA/4TA EDAD',
   'REIMPRIMIR RECIBO',
   'BUSCAR PRODUCTO',
   'DETALLE DE PRODUCTO',
-  'DESCUENTO',
+  'ABRIR CAJÓN'
 ];
 
 const accionesDerecha = [
@@ -551,6 +552,75 @@ export default function Home() {
     return { isv15, isv18 };
   }
 
+  // NUEVA FUNCIÓN: Abrir cajón de dinero
+  const abrirCajonDinero = () => {
+    try {
+      // Comando ESC/POS para abrir cajón de dinero
+      // Código 1B 70 00 3C 78 (ESC p 0 60 120)
+      const comandoAbrir = String.fromCharCode(27) + 'p' + String.fromCharCode(0, 60, 120);
+      
+      // Crear ventana oculta para enviar comando a impresora
+      const ventanaImpresion = window.open('', '_blank', 'width=1,height=1');
+      if (ventanaImpresion) {
+        ventanaImpresion.document.write(`
+          <html>
+          <head><title>Abrir Cajón</title></head>
+          <body style="font-family: monospace; font-size: 1px;">
+            <pre>${comandoAbrir}</pre>
+            <script>
+              setTimeout(() => {
+                window.print();
+                window.close();
+              }, 100);
+            </script>
+          </body>
+          </html>
+        `);
+        ventanaImpresion.document.close();
+        
+        mostrarNotificacion('💰 Cajón de dinero abierto', 'success');
+      } else {
+        // Fallback: intentar con iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (doc) {
+          doc.write(`
+            <html>
+            <body style="font-family: monospace; font-size: 1px;">
+              <pre>${comandoAbrir}</pre>
+            </body>
+            </html>
+          `);
+          doc.close();
+          
+          setTimeout(() => {
+            iframe.contentWindow?.print();
+            document.body.removeChild(iframe);
+          }, 100);
+          
+          mostrarNotificacion('💰 Comando cajón enviado', 'info');
+        }
+      }
+    } catch (error) {
+      console.error('Error abriendo cajón:', error);
+      mostrarNotificacion('⚠️ Error abriendo cajón de dinero', 'warning');
+    }
+  };
+
+  // FUNCIÓN MEJORADA: Detectar si el pago incluye efectivo
+  const detectarPagoEfectivo = (medioPago: string, pagosCombinados?: Array<{medio: string, monto: number}>) => {
+    // Pago simple en efectivo
+    if (medioPago === 'EFECTIVO') return true;
+    
+    // Pago combinado que incluye efectivo
+    if (pagosCombinados && pagosCombinados.some(pago => pago.medio === 'EFECTIVO')) return true;
+    
+    return false;
+  };
+
   // 4. Al presionar COBRAR, validar y generar factura
   function handleCobrar(medioPago: string) {
     if (productos.length === 0) {
@@ -573,6 +643,11 @@ export default function Home() {
     
     // Calcular ISV
     const { isv15, isv18 } = calcularISV(productos);
+    
+    // DETECTAR PAGO EN EFECTIVO Y ABRIR CAJÓN
+    if (detectarPagoEfectivo(medioPago)) {
+      abrirCajonDinero();
+    }
     
     // Crear objeto factura
     const nuevaFactura = {
@@ -1202,15 +1277,21 @@ export default function Home() {
   };
 
   const handleCobrarCombinado = (pagos: { medio: string; monto: number }[]) => {
-    // Crear descripción del medio de pago combinado
-    const descripcionPago = pagos.map(p => `${p.medio}: L${p.monto.toFixed(2)}`).join(', ');
+    // DETECTAR SI EL PAGO COMBINADO INCLUYE EFECTIVO
+    if (detectarPagoEfectivo('', pagos)) {
+      abrirCajonDinero();
+    }
     
-    // Usar la función de cobrar existente pero con descripción combinada
+    // Crear descripción del medio de pago combinado
+    const descripcionPago = pagos.map(p => `${p.medio}: L${p.monto.toFixed(2)}`).join(' + ');
+    
+    // Ejecutar el cobro normal con la descripción combinada
     handleCobrar(`COMBINADO (${descripcionPago})`);
     
-    setOpenPagoCombinado(false);
+    // Limpiar estado de pago combinado
     setPagosCombinados([]);
-    setMontoRestante(0);
+    setMontoRestante(total);
+    setOpenPagoCombinado(false);
   };
 
   // Funciones para reserva con nombre
@@ -2308,7 +2389,7 @@ export default function Home() {
   return (
     <Box sx={{ minHeight: '100vh', maxHeight: '100vh', overflow: 'hidden', bgcolor: '#e5e5e5', display: 'flex', flexDirection: 'column' }}>
       <Head>
-        <title>Sistema POS Honduras</title>
+        <title>BCPOS</title>
         <style>{`
           .tipo-cliente-button:hover {
             transform: none !important;
@@ -2363,6 +2444,8 @@ export default function Home() {
                   setOpenBuscarProducto(true);
                 } else if (accion === 'DETALLE DE PRODUCTO') {
                   mostrarDetalleProducto();
+                } else if (accion === 'ABRIR CAJÓN') {
+                  abrirCajonDinero();
                 }
               }}
             >
@@ -3441,6 +3524,9 @@ export default function Home() {
               <Typography>Medio de Pago: {factura.medioPago}</Typography>
               <Typography>─────────────────────────────────</Typography>
               <Typography align="center">¡Gracias por su compra!</Typography>
+              <Typography align="center" sx={{ mt: 1, fontWeight: 'bold', color: '#1976d2' }}>
+                BCPOS
+              </Typography>
             </Box>
           )}
           

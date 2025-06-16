@@ -6,8 +6,13 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Para SQLite (por defecto - más fácil instalación)
+  provider = "sqlite"
+  url      = "file:./bcpos.db"
+  
+  // Para PostgreSQL (comentado - descomentar si se prefiere PostgreSQL)
+  // provider = "postgresql"
+  // url      = env("DATABASE_URL")
 }
 
 // =====================================================
@@ -154,14 +159,14 @@ model VentaDiaria {
 // TABLAS DE INVENTARIO COMPATIBLES CON BUSINESS CENTRAL
 // =====================================================
 
-// Tabla principal de artículos (Items en BC)
+// Artículos/Items (Item en BC)
 model Item {
   id                    Int                 @id @default(autoincrement())
-  no                    String              @unique // No. en BC
+  no                    String              @unique // No.
   description           String              // Description
   description2          String?             // Description 2
-  baseUnitOfMeasure     String              @default("PCS") // Base Unit of Measure
-  type                  String              @default("Inventory") // Inventory, Non-Inventory, Service
+  baseUnitOfMeasure     String              // Base Unit of Measure
+  type                  String              @default("Inventory") // Type: Inventory, Service, Non-Inventory
   inventoryPostingGroup String?             // Inventory Posting Group
   genProdPostingGroup   String?             // Gen. Prod. Posting Group
   taxGroupCode          String?             // Tax Group Code
@@ -170,27 +175,34 @@ model Item {
   unitCost              Float               @default(0) // Unit Cost
   lastDirectCost        Float               @default(0) // Last Direct Cost
   standardCost          Float               @default(0) // Standard Cost
-  costingMethod         String              @default("Average") // FIFO, LIFO, Specific, Average, Standard
-  replenishmentSystem   String              @default("Purchase") // Purchase, Prod. Order, Assembly
-  reorderPoint          Float               @default(0) // Reorder Point
-  maximumInventory      Float               @default(0) // Maximum Inventory
-  minimumOrderQty       Float               @default(0) // Minimum Order Quantity
-  maximumOrderQty       Float               @default(0) // Maximum Order Quantity
-  safetyStockQty        Float               @default(0) // Safety Stock Quantity
-  orderMultiple         Float               @default(1) // Order Multiple
-  shelfNo               String?             // Shelf No.
-  blocked               Boolean             @default(false) // Blocked
+  costing_method        String              @default("Average") // Costing Method: FIFO, LIFO, Specific, Average, Standard
+  costIsAdjusted        Boolean             @default(false) // Cost is Adjusted
+  allowInvoiceDisc      Boolean             @default(true) // Allow Invoice Disc.
+  statisticsGroup       Int?                // Statistics Group
+  commissionGroup       Int?                // Commission Group
+  unitVolume            Float               @default(0) // Unit Volume
+  unitWeight            Float               @default(0) // Unit Weight
+  durabilityCode        String?             // Durability Code
+  frequencyCode         String?             // Frequency Code
+  materialCode          String?             // Material Code
+  diameterCode          String?             // Diameter Code
+  lengthCode            String?             // Length Code
+  widthCode             String?             // Width Code
+  heightCode            String?             // Height Code
+  indentedBOM           Boolean             @default(false) // Indented BOM
+  productionBOMNo       String?             // Production BOM No.
+  routingNo             String?             // Routing No.
+  inventoryValue        Float               @default(0) // Inventory Value
+  searchDescription     String?             // Search Description
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
   
   // Relaciones
-  itemLedgerEntries     ItemLedgerEntry[]
+  ledgerEntries         ItemLedgerEntry[]
   valueEntries          ValueEntry[]
   bomComponents         BOMComponent[]      @relation("ParentItem")
-  bomParents            BOMComponent[]      @relation("ComponentItem")
+  bomComponentOf        BOMComponent[]      @relation("ComponentItem")
   purchaseLines         PurchaseLine[]
-  salesLines            SalesLine[]
-  itemJournalLines      ItemJournalLine[]
   
   @@map("items")
 }
@@ -198,7 +210,7 @@ model Item {
 // Movimientos de inventario (Item Ledger Entry en BC)
 model ItemLedgerEntry {
   id                    Int                 @id @default(autoincrement())
-  entryNo               Int                 @unique @default(autoincrement()) // Entry No.
+  entryNo               Int                 @unique // Entry No. - Se generará secuencialmente en código
   itemNo                String              // Item No.
   postingDate           DateTime            // Posting Date
   entryType             String              // Entry Type: Purchase, Sale, Positive Adjmt., Negative Adjmt., Transfer, Consumption, Output
@@ -209,17 +221,24 @@ model ItemLedgerEntry {
   quantity              Float               // Quantity
   remainingQuantity     Float               // Remaining Quantity
   invoicedQuantity      Float               @default(0) // Invoiced Quantity
-  unitOfMeasureCode     String              @default("PCS") // Unit of Measure Code
+  unitOfMeasureCode     String              // Unit of Measure Code
+  unitCost              Float               @default(0) // Unit Cost (LCY)
   salesAmountActual     Float               @default(0) // Sales Amount (Actual)
   costAmountActual      Float               @default(0) // Cost Amount (Actual)
   costAmountExpected    Float               @default(0) // Cost Amount (Expected)
   costAmountNonInvtbl   Float               @default(0) // Cost Amount (Non-Invtbl.)
   completelyInvoiced    Boolean             @default(false) // Completely Invoiced
   open                  Boolean             @default(true) // Open
-  appliedEntryToAdjust  Int?                // Applied Entry to Adjust
+  appliedEntryToAdjust  Boolean             @default(false) // Applied Entry to Adjust
+  positive              Boolean             // Positive
+  sourceType            String?             // Source Type
   globalDimension1Code  String?             // Global Dimension 1 Code
   globalDimension2Code  String?             // Global Dimension 2 Code
+  journalBatchName      String?             // Journal Batch Name
+  reasonCode            String?             // Reason Code
+  returnReasonCode      String?             // Return Reason Code
   createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
   
   // Relaciones
   item                  Item                @relation(fields: [itemNo], references: [no])
@@ -231,10 +250,10 @@ model ItemLedgerEntry {
 // Movimientos de valor (Value Entry en BC)
 model ValueEntry {
   id                    Int                 @id @default(autoincrement())
-  entryNo               Int                 @unique @default(autoincrement()) // Entry No.
-  itemLedgerEntryNo     Int                 // Item Ledger Entry No.
+  entryNo               Int                 @unique // Entry No. - Se generará secuencialmente en código
   itemNo                String              // Item No.
   postingDate           DateTime            // Posting Date
+  itemLedgerEntryNo     Int                 // Item Ledger Entry No.
   itemLedgerEntryType   String              // Item Ledger Entry Type
   sourceNo              String?             // Source No.
   documentNo            String              // Document No.
@@ -243,22 +262,30 @@ model ValueEntry {
   inventoryPostingGroup String?             // Inventory Posting Group
   sourcePostingGroup    String?             // Source Posting Group
   itemChargeNo          String?             // Item Charge No.
-  valuedQuantity        Float               // Valued Quantity
-  itemLedgerEntryQty    Float               // Item Ledger Entry Quantity
+  valuedQuantity        Float               @default(0) // Valued Quantity
+  itemLedgerEntryQty    Float               @default(0) // Item Ledger Entry Quantity
   invoicedQuantity      Float               @default(0) // Invoiced Quantity
   costAmountActual      Float               @default(0) // Cost Amount (Actual)
   costAmountExpected    Float               @default(0) // Cost Amount (Expected)
   costAmountNonInvtbl   Float               @default(0) // Cost Amount (Non-Invtbl.)
+  costPostedToGL        Float               @default(0) // Cost Posted to G/L
+  expectedCostPostedToGL Float              @default(0) // Expected Cost Posted to G/L
+  entryType             String              // Entry Type: Direct Cost, Revaluation, Rounding, Indirect Cost, Variance
+  varianceType          String?             // Variance Type
   salesAmountActual     Float               @default(0) // Sales Amount (Actual)
   salesAmountExpected   Float               @default(0) // Sales Amount (Expected)
   discountAmount        Float               @default(0) // Discount Amount
   costPerUnit           Float               @default(0) // Cost per Unit
-  sourceCode            String?             // Source Code
-  adjusts               Boolean             @default(false) // Adjusts
-  appliedEntryToAdjust  Int?                // Applied Entry to Adjust
+  salesPerUnit          Float               @default(0) // Sales per Unit
+  partialRevaluation    Boolean             @default(false) // Partial Revaluation
+  completelyInvoiced    Boolean             @default(false) // Completely Invoiced
   globalDimension1Code  String?             // Global Dimension 1 Code
   globalDimension2Code  String?             // Global Dimension 2 Code
+  sourceCode            String?             // Source Code
+  adjustments           Boolean             @default(false) // Adjustments
+  appliedEntryToAdjust  Boolean             @default(false) // Applied Entry to Adjust
   createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
   
   // Relaciones
   item                  Item                @relation(fields: [itemNo], references: [no])
