@@ -85,4 +85,39 @@ src/pages/index.tsx.backup*
 
 # Archivos temporales
 *.tmp
-*.temp 
+*.temp
+
+# Archivos de entorno
+.env
+.env.local
+.env.*.local
+
+# Archivos de base de datos
+*.db
+*.db-journal
+
+# Dependencias
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Archivos de build
+.next/
+out/
+build/
+dist/
+
+# Archivos de logs
+logs/
+*.log 
