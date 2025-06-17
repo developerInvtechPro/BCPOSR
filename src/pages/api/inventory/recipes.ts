@@ -78,7 +78,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse, inventorySer
       }
     });
 
-    const recipeList = recipes.map(recipe => ({
+    const recipeList = recipes.map((recipe: { parentItemNo: string; parentItem?: { description: string } }) => ({
       parentItemNo: recipe.parentItemNo,
       parentItemDescription: recipe.parentItem?.description,
       componentCount: 0 // Se calculará después

@@ -1446,7 +1446,7 @@ const InventoryManager: React.FC = () => {
                 label="Costo Unitario"
                 type="number"
                 value={movementForm.unitCost}
-                onChange={(e) => setMovementForm({ ...movementForm, unitCost: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setMovementForm({ ...movementForm, unitCost: (parseFloat(e.target.value) || 0).toString() })}
                 disabled={movementForm.type === 'adjustment-negative'}
                 inputProps={{ 
                   step: 0.01, 
@@ -1566,7 +1566,7 @@ const InventoryManager: React.FC = () => {
                           const itemDetails = await getItemDetails(newValue.value);
                           if (itemDetails) {
                             newComponents[index].description = itemDetails.description;
-                            newComponents[index].unitCost = itemDetails.unitCost || 0;
+                            newComponents[index].unitCost = (itemDetails.unitCost || 0).toString();
                           }
                         }
                         
@@ -1590,7 +1590,7 @@ const InventoryManager: React.FC = () => {
                       value={component.quantityPer}
                       onChange={(e) => {
                         const newComponents = [...recipeForm.components];
-                        newComponents[index].quantityPer = e.target.value;
+                        newComponents[index].quantityPer = (parseFloat(e.target.value) || 0).toString();
                         setRecipeForm({ ...recipeForm, components: newComponents });
                       }}
                       inputProps={{ 
@@ -1609,7 +1609,7 @@ const InventoryManager: React.FC = () => {
                       value={component.unitCost}
                       onChange={(e) => {
                         const newComponents = [...recipeForm.components];
-                        newComponents[index].unitCost = e.target.value;
+                        newComponents[index].unitCost = (parseFloat(e.target.value) || 0).toString();
                         setRecipeForm({ ...recipeForm, components: newComponents });
                       }}
                       inputProps={{ 
@@ -1627,7 +1627,7 @@ const InventoryManager: React.FC = () => {
                       value={component.scrapPct}
                       onChange={(e) => {
                         const newComponents = [...recipeForm.components];
-                        newComponents[index].scrapPct = e.target.value;
+                        newComponents[index].scrapPct = (parseFloat(e.target.value) || 0).toString();
                         setRecipeForm({ ...recipeForm, components: newComponents });
                       }}
                       inputProps={{ 

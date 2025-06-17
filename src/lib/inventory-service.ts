@@ -207,7 +207,7 @@ export class InventoryService {
    */
   async postInventoryMovement(movement: InventoryMovement) {
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      return await this.prisma.$transaction(async (tx: PrismaClient) => {
         // Verificar que el artículo exista
         const item = await tx.item.findUnique({
           where: { no: movement.itemNo }
@@ -333,7 +333,7 @@ export class InventoryService {
       }
     });
 
-    const quantity = entries.reduce((sum, entry) => sum + entry.quantity, 0);
+    const quantity = entries.reduce((sum: number, entry: { quantity: number }) => sum + entry.quantity, 0);
     
     // Calcular costo promedio actual
     const valueEntries = await this.prisma.valueEntry.findMany({
@@ -343,8 +343,8 @@ export class InventoryService {
       }
     });
 
-    const totalValue = valueEntries.reduce((sum, entry) => sum + entry.costAmountActual, 0);
-    const totalQty = valueEntries.reduce((sum, entry) => sum + entry.valuedQuantity, 0);
+    const totalValue = valueEntries.reduce((sum: number, entry: { costAmountActual: number }) => sum + entry.costAmountActual, 0);
+    const totalQty = valueEntries.reduce((sum: number, entry: { valuedQuantity: number }) => sum + entry.valuedQuantity, 0);
     const averageCost = totalQty > 0 ? totalValue / totalQty : 0;
 
     return {
@@ -424,7 +424,7 @@ export class InventoryService {
     }>;
   }) {
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      return await this.prisma.$transaction(async (tx: PrismaClient) => {
         // Verificar que el proveedor exista
         const vendor = await tx.vendor.findUnique({
           where: { no: orderData.vendorNo }
@@ -514,7 +514,7 @@ export class InventoryService {
    */
   async receivePurchaseOrder(documentNo: string, linesToReceive?: Array<{ lineNo: number; qtyToReceive: number }>) {
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      return await this.prisma.$transaction(async (tx: PrismaClient) => {
         // Obtener orden de compra
         const purchaseHeader = await tx.purchaseHeader.findUnique({
           where: { no: documentNo },
@@ -676,8 +676,10 @@ export class InventoryService {
       }
     });
 
+    
+
     // Formatear para compatibilidad con BC
-    return movements.map(movement => ({
+    return movements.map((movement: { itemNo: string; postingDate: Date; entryType: string; documentNo: string; description?: string; locationCode: string; quantity: number; unitOfMeasureCode: string; costAmountActual: number; salesAmountActual: number; sourceNo?: string; globalDimension1Code?: string; globalDimension2Code?: string }) => ({
       'Item No.': movement.itemNo,
       'Posting Date': movement.postingDate.toISOString().split('T')[0],
       'Entry Type': movement.entryType,
