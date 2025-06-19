@@ -7,14 +7,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const facturaData: FacturaData = req.body;
       
+      console.log('🔍 API: Recibiendo datos de factura:', JSON.stringify(facturaData, null, 2));
+      
       const result = await facturaService.crearFactura(facturaData);
+      
+      console.log('🔍 API: Resultado del servicio:', result);
       
       if (result.success) {
         res.status(201).json(result);
       } else {
+        console.error('❌ API: Error en el servicio:', result);
         res.status(400).json(result);
       }
     } catch (error: any) {
+      console.error('❌ API: Error interno:', error);
+      console.error('🔍 API: Stack trace:', error.stack);
       res.status(500).json({
         success: false,
         error: error.message,

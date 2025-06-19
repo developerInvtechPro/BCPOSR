@@ -216,6 +216,26 @@ export const useFacturas = () => {
     }
   };
 
+  /**
+   * Obtener el siguiente correlativo disponible
+   */
+  const obtenerSiguienteCorrelativo = async (serie: string) => {
+    try {
+      const response = await fetch(`/api/facturas/siguiente-correlativo?serie=${encodeURIComponent(serie)}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        return result.data;
+      } else {
+        console.error('Error al obtener siguiente correlativo:', result.error);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error al obtener siguiente correlativo:', error);
+      return null;
+    }
+  };
+
   // Cargar facturas al inicializar
   useEffect(() => {
     listarFacturas();
@@ -231,5 +251,6 @@ export const useFacturas = () => {
     obtenerFactura,
     anularFactura,
     obtenerEstadisticas,
+    obtenerSiguienteCorrelativo
   };
 }; 

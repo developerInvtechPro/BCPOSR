@@ -50,10 +50,40 @@ export interface FacturaFiltro {
 export class FacturaService {
   
   /**
+   * Obtener el siguiente correlativo disponible
+   */
+  async obtenerSiguienteCorrelativo(serie: string) {
+    try {
+      // Buscar la factura con el correlativo más alto para esta serie
+      const ultimaFactura = await prisma.factura.findFirst({
+        where: {
+          numero: {
+            startsWith: serie
+          }
+        },
+        orderBy: {
+          correlativo: 'desc'
+        }
+      });
+
+      if (ultimaFactura) {
+        return ultimaFactura.correlativo + 1;
+      } else {
+        return 1; // Si no hay facturas, empezar en 1
+      }
+    } catch (error: any) {
+      console.error('Error al obtener siguiente correlativo:', error);
+      return 1;
+    }
+  }
+
+  /**
    * Crear una nueva factura
    */
   async crearFactura(facturaData: FacturaData) {
     try {
+      console.log('🔍 Creando factura con datos:', JSON.stringify(facturaData, null, 2));
+      
       const factura = await prisma.factura.create({
         data: {
           numero: facturaData.numero,
@@ -79,7 +109,7 @@ export class FacturaService {
           proveedor: facturaData.proveedor,
           observaciones: facturaData.observaciones,
           items: {
-            create: facturaData.items.map(item => ({
+            create: facturaData.items.map((item: FacturaData['items'][0]) => ({
               codigoProducto: item.codigoProducto,
               descripcion: item.descripcion,
               cantidad: item.cantidad,
@@ -97,12 +127,17 @@ export class FacturaService {
         }
       });
 
+      console.log('✅ Factura creada exitosamente:', factura.numero);
+
       return {
         success: true,
         data: factura,
         message: `Factura ${factura.numero} creada exitosamente`
       };
     } catch (error: any) {
+      console.error('❌ Error al crear factura:', error);
+      console.error('🔍 Stack trace:', error.stack);
+      
       return {
         success: false,
         error: error.message,

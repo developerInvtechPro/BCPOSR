@@ -96,6 +96,7 @@ export default function Home() {
     listarFacturas, 
     anularFactura, 
     obtenerEstadisticas,
+    obtenerSiguienteCorrelativo,
     loading: loadingFacturas 
   } = useFacturas();
   
@@ -111,15 +112,15 @@ export default function Home() {
   } = useTurnos();
 
   const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
-  const [productos, setProductos] = useState([
-    { descripcion: 'Café Americano', precioUnitario: 25, cantidad: 2, precio: 50 },
-    { descripcion: 'Sandwich Pollo', precioUnitario: 85, cantidad: 1, precio: 85 },
-  ]);
+  const [productos, setProductos] = useState<any[]>([]);
   const [tipoCliente, setTipoCliente] = useState('final');
   const [openClientes, setOpenClientes] = useState<'rtn' | 'credito' | null>(null);
   const [openCobro, setOpenCobro] = useState(false);
   const [selectedRow, setSelectedRow] = useState<number>(0);
   const [editCantidad, setEditCantidad] = useState<string>('');
+  const [editingProductIndex, setEditingProductIndex] = useState<number | null>(null);
+  const [openEditQuantity, setOpenEditQuantity] = useState(false);
+  const [tempQuantity, setTempQuantity] = useState<string>('');
   const tableRef = useRef<HTMLDivElement>(null);
   const [openGerente, setOpenGerente] = useState(false);
   const [tabGerenteValue, setTabGerenteValue] = useState(0);
@@ -165,11 +166,7 @@ export default function Home() {
     id: number;
     tipo: 'mesa' | 'delivery' | 'pickup' | 'barra';
     ref: string;
-  } | null>({
-    id: 1,
-    tipo: 'mesa',
-    ref: '5'
-  });
+  } | null>(null);
   
   // Estados para notificaciones
   const [notification, setNotification] = useState<{
@@ -844,6 +841,56 @@ export default function Home() {
     }
   };
 
+  // Función para abrir diálogo de edición de cantidad
+  const abrirEditarCantidad = (index: number) => {
+    setEditingProductIndex(index);
+    setTempQuantity(productos[index].cantidad.toString());
+    setOpenEditQuantity(true);
+  };
+
+  // Función para guardar cantidad editada
+  const guardarCantidadEditada = () => {
+    if (editingProductIndex !== null) {
+      const nuevaCantidad = parseInt(tempQuantity);
+      if (isNaN(nuevaCantidad) || nuevaCantidad <= 0) {
+        mostrarNotificacion('❌ La cantidad debe ser un número mayor a 0', 'error');
+        return;
+      }
+
+      setProductos(prev => prev.map((producto, idx) => 
+        idx === editingProductIndex 
+          ? { 
+              ...producto, 
+              cantidad: nuevaCantidad, 
+              precio: nuevaCantidad * producto.precioUnitario 
+            }
+          : producto
+      ));
+
+      setOpenEditQuantity(false);
+      setEditingProductIndex(null);
+      setTempQuantity('');
+      mostrarNotificacion('✅ Cantidad actualizada', 'success');
+    }
+  };
+
+  // Función para cancelar edición
+  const cancelarEdicion = () => {
+    setOpenEditQuantity(false);
+    setEditingProductIndex(null);
+    setTempQuantity('');
+  };
+
+  // Función para limpiar todo el pedido
+  const limpiarPedido = () => {
+    setProductos([]);
+    setPedidoEnEdicion(null);
+    setSelectedRow(0);
+    localStorage.removeItem('productos');
+    localStorage.removeItem('pedidoEnEdicion');
+    mostrarNotificacion('Pedido limpiado', 'info');
+  };
+
   // Función para manejar el cobro con validación de turno
   const handleCobrar = async (medioPago: string) => {
     // Validar que haya un turno abierto
@@ -864,12 +911,25 @@ export default function Home() {
       return;
     }
     
-    // Generar correlativo
-    let correlativo = caiActivo.actual;
+    // Obtener el siguiente correlativo disponible desde la base de datos
+    let correlativo = caiActivo.actual; // Definir correlativo primero
+    const siguienteCorrelativoData = await obtenerSiguienteCorrelativo(caiActivo.serie);
+    if (siguienteCorrelativoData) {
+      correlativo = siguienteCorrelativoData.siguienteCorrelativo;
+      console.log('🔍 Usando correlativo desde BD:', correlativo);
+    } else {
+      console.log('⚠️ No se pudo obtener correlativo desde BD, usando local:', correlativo);
+    }
+    
+    // Verificar rango del CAI
     if (correlativo > caiActivo.rangoFinal) {
       mostrarNotificacion('Se agotó el rango de CAI', 'error');
       return;
     }
+    
+    // Verificar si el número de factura ya existe
+    const numeroFactura = `${caiActivo.serie}-${correlativo.toString().padStart(8, '0')}`;
+    console.log('🔍 Verificando número de factura:', numeroFactura);
     
     // Calcular ISV
     const { isv15, isv18 } = calcularISV(productos);
@@ -901,7 +961,7 @@ export default function Home() {
 
     // Guardar factura en la base de datos
     const facturaData = {
-      numero: `${caiActivo.serie}-${correlativo.toString().padStart(8, '0')}`,
+      numero: numeroFactura,
       correlativo: correlativo,
       cai: caiActivo.cai,
       tipoCliente: tipoCliente,
@@ -949,17 +1009,22 @@ export default function Home() {
       setProductos([]);
       setTipoCliente('CONSUMIDOR FINAL');
       
-      // Incrementar correlativo
+      // Incrementar correlativo DESPUÉS de crear la factura exitosamente
       setCais(cais => cais.map((c, i) => i === 0 ? { ...c, actual: c.actual + 1 } : c));
       
       mostrarNotificacion('✅ Factura creada exitosamente', 'success');
     } else {
-      mostrarNotificacion(`❌ Error al crear factura: ${result.error}`, 'error');
+      console.error('❌ Error completo:', result);
+      mostrarNotificacion(`❌ Error al crear factura: ${result.error || 'Error desconocido'}`, 'error');
     }
     
     // Limpiar venta y descuentos
     setProductos([]);
     setOpenCobro(false);
+    
+    // Limpiar localStorage después de completar la factura
+    localStorage.removeItem('productos');
+    localStorage.removeItem('pedidoEnEdicion');
   };
 
   // Efectos básicos
@@ -980,6 +1045,38 @@ export default function Home() {
     cargarTurnoActual();
   }, []);
 
+  // Cargar productos desde localStorage al iniciar
+  useEffect(() => {
+    const productosGuardados = localStorage.getItem('productos');
+    const pedidoGuardado = localStorage.getItem('pedidoEnEdicion');
+    
+    if (productosGuardados) {
+      try {
+        setProductos(JSON.parse(productosGuardados));
+      } catch (error) {
+        console.error('Error al cargar productos desde localStorage:', error);
+      }
+    }
+    
+    if (pedidoGuardado) {
+      try {
+        setPedidoEnEdicion(JSON.parse(pedidoGuardado));
+      } catch (error) {
+        console.error('Error al cargar pedido desde localStorage:', error);
+      }
+    }
+  }, []);
+
+  // Guardar productos en localStorage cuando cambien
+  useEffect(() => {
+    localStorage.setItem('productos', JSON.stringify(productos));
+  }, [productos]);
+
+  // Guardar pedido en localStorage cuando cambie
+  useEffect(() => {
+    localStorage.setItem('pedidoEnEdicion', JSON.stringify(pedidoEnEdicion));
+  }, [pedidoEnEdicion]);
+
   // Manejo de teclado
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -996,7 +1093,7 @@ export default function Home() {
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedRow, productos.length]);
+  }, [selectedRow, productos.length, eliminarProducto]);
 
   return (
     <Box sx={{ minHeight: '100vh', maxHeight: '100vh', overflow: 'hidden', bgcolor: '#e5e5e5', display: 'flex', flexDirection: 'column' }}>
@@ -1095,6 +1192,20 @@ export default function Home() {
             >
               🪑 SELECCIONAR MESA
             </Button>
+            <Button
+              fullWidth
+              variant="outlined"
+              sx={{ 
+                m: 0.5, 
+                fontSize: '0.75rem',
+                bgcolor: '#fff3e0',
+                border: '2px solid #ff9800',
+                fontWeight: 'bold'
+              }}
+              onClick={limpiarPedido}
+            >
+              🗑️ LIMPIAR PEDIDO
+            </Button>
           </Box>
         </Box>
 
@@ -1133,6 +1244,7 @@ export default function Home() {
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>Precio Unit.</TableCell>
                   <TableCell align="center" sx={{ fontWeight: 'bold' }}>Cant.</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>Total</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', width: 80 }}>Editar</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -1151,11 +1263,26 @@ export default function Home() {
                     <TableCell align="right">L{producto.precioUnitario.toFixed(2)}</TableCell>
                     <TableCell align="center" sx={{ fontWeight: 'bold' }}>{producto.cantidad}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>L{producto.precio.toFixed(2)}</TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          abrirEditarCantidad(idx);
+                        }}
+                        sx={{ 
+                          color: '#1976d2',
+                          '&:hover': { bgcolor: '#e3f2fd' }
+                        }}
+                      >
+                        ✏️
+                      </IconButton>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {productos.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                    <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                       No hay productos agregados
                     </TableCell>
                   </TableRow>
@@ -1222,64 +1349,116 @@ export default function Home() {
         </Box>
       </Box>
 
-      {/* Diálogo para Pre-Cuenta - NUEVA FUNCIONALIDAD */}
-      <Dialog 
-        open={openPreCuenta} 
-        onClose={() => setOpenPreCuenta(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle sx={{ bgcolor: '#e8f5e8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>📄 Pre-Cuenta - Documento No Fiscal</span>
-          <Box>
-            <Button
-              onClick={() => imprimirListing(factura)}
-              variant="contained"
-              color="success"
-              size="small"
-              sx={{ mr: 1 }}
-            >
-              🖨️ Imprimir Listing
-            </Button>
-            <IconButton onClick={() => setOpenPreCuenta(false)}>
-              <DeleteIcon />
-            </IconButton>
-          </Box>
+      {/* Diálogo para Editar Cantidad */}
+      <Dialog open={openEditQuantity} onClose={cancelarEdicion} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ bgcolor: '#1976d2', color: 'white' }}>
+          ✏️ Editar Cantidad
         </DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
-          {factura && factura.tipo === 'PRE_CUENTA' && (
-            <Box sx={{ 
-              fontFamily: 'Courier New, monospace', 
-              fontSize: '12px', 
-              whiteSpace: 'pre-line', 
-              bgcolor: '#f9f9f9', 
-              p: 2,
-              lineHeight: 1.2,
-              border: '2px dashed #ccc',
-              margin: 2
-            }}>
-              {generarFormatoListing(factura)}
-            </Box>
-          )}
-          <Box sx={{ p: 2, bgcolor: '#fff3cd', borderTop: '1px solid #ddd' }}>
-            <Typography variant="body2" color="text.secondary">
-              ℹ️ <strong>Instrucciones:</strong>
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              • Este es un documento NO FISCAL para control interno
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              • El cliente presenta esta cuenta para proceder al pago
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              • Después del pago se emite la factura fiscal oficial
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              • El formato listing está optimizado para impresoras térmicas de 80mm
-            </Typography>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            {editingProductIndex !== null && productos[editingProductIndex] && (
+              <>
+                <Typography variant="h6" gutterBottom>
+                  Producto: {productos[editingProductIndex].descripcion}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Precio unitario: L{productos[editingProductIndex].precioUnitario.toFixed(2)}
+                </Typography>
+                
+                <TextField
+                  fullWidth
+                  label="Nueva cantidad"
+                  type="number"
+                  value={tempQuantity}
+                  onChange={(e) => setTempQuantity(e.target.value)}
+                  variant="outlined"
+                  size="medium"
+                  inputProps={{ min: 1, step: 1 }}
+                  autoFocus
+                  sx={{ mb: 2 }}
+                />
+                
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={cancelarEdicion}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={guardarCantidadEditada}
+                  >
+                    Guardar
+                  </Button>
+                </Box>
+              </>
+            )}
           </Box>
         </DialogContent>
       </Dialog>
+
+      {/* Diálogo de Selección de Mesas */}
+      <Dialog open={openSeleccionMesa} onClose={() => setOpenSeleccionMesa(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ bgcolor: '#2196f3', color: 'white' }}>
+          🪑 Selección de Mesa
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Seleccione una mesa para el pedido
+            </Typography>
+            
+            <Grid container spacing={2}>
+              {mesas.map((mesa) => (
+                <Grid item xs={3} key={mesa.numero}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    onClick={() => {
+                      setPedidoEnEdicion({
+                        id: Date.now(),
+                        tipo: 'mesa',
+                        ref: mesa.numero.toString()
+                      });
+                      setOpenSeleccionMesa(false);
+                      mostrarNotificacion(`Mesa ${mesa.numero} seleccionada`, 'success');
+                    }}
+                    sx={{ 
+                      height: 80,
+                      fontSize: '1.2rem',
+                      fontWeight: 'bold',
+                      bgcolor: mesa.estado === 'libre' ? '#4caf50' : 
+                               mesa.estado === 'ocupada' ? '#f44336' : '#ff9800',
+                      '&:hover': {
+                        bgcolor: mesa.estado === 'libre' ? '#45a049' : 
+                                 mesa.estado === 'ocupada' ? '#d32f2f' : '#f57c00'
+                      }
+                    }}
+                  >
+                    Mesa {mesa.numero}
+                    <br />
+                    <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+                      {mesa.estado === 'libre' ? 'LIBRE' : 
+                       mesa.estado === 'ocupada' ? 'OCUPADA' : 'RESERVADA'}
+                    </Typography>
+                  </Button>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Gestión de Turnos */}
+      <GestionTurnos 
+        open={openGestionTurnos}
+        onClose={() => setOpenGestionTurnos(false)}
+        sucursal={configuracionAlmacenes.almacenActual}
+        codigoPV={configuracionAlmacenes.codigoPV}
+      />
 
       {/* Diálogo de categorías */}
       <Dialog open={!!categoriaActiva} onClose={() => setCategoriaActiva(null)} maxWidth="md" fullWidth>
@@ -1303,367 +1482,6 @@ export default function Home() {
               </Grid>
             ))}
           </Grid>
-        </DialogContent>
-      </Dialog>
-
-      {/* Diálogo SUPER - Configuración Avanzada y Business Central */}
-      <Dialog 
-        open={openSuper} 
-        onClose={() => setOpenSuper(false)}
-        maxWidth="lg"
-        fullWidth
-        sx={{ '& .MuiDialog-paper': { minHeight: '80vh' } }}
-      >
-        <DialogTitle sx={{ bgcolor: '#ff9800', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <span>⚙️ SUPER - Configuración Avanzada</span>
-            <Chip 
-              label={configuracionBusinessCentral.habilitado ? 'BC Conectado' : 'BC Desconectado'} 
-              color={configuracionBusinessCentral.habilitado ? 'success' : 'error'} 
-              size="small" 
-            />
-          </Box>
-          <IconButton onClick={() => setOpenSuper(false)} sx={{ color: 'white' }}>
-            <DeleteIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
-          <Tabs value={tabSuper} onChange={(e, v) => setTabSuper(v)} variant="fullWidth">
-            <Tab label="🔗 Business Central" />
-            <Tab label="🧪 Test Postman" />
-            <Tab label="⚙️ Configuración" />
-          </Tabs>
-
-          {/* Pestaña Business Central */}
-          {tabSuper === 0 && (
-            <Box sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom sx={{ color: '#1976d2', display: 'flex', alignItems: 'center', gap: 1 }}>
-                🔗 Configuración de Business Central
-                <Chip 
-                  label={configuracionBusinessCentral.habilitado ? '✅ Conectado' : '❌ Desconectado'} 
-                  color={configuracionBusinessCentral.habilitado ? 'success' : 'error'} 
-                  size="small" 
-                />
-              </Typography>
-              
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Tenant ID"
-                    value={configuracionBusinessCentral.tenantId}
-                    onChange={(e) => setConfiguracionBusinessCentral(prev => ({ ...prev, tenantId: e.target.value }))}
-                    variant="outlined"
-                    size="small"
-                    helperText="ID del tenant de Azure"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Company ID"
-                    value={configuracionBusinessCentral.companyId}
-                    onChange={(e) => setConfiguracionBusinessCentral(prev => ({ ...prev, companyId: e.target.value }))}
-                    variant="outlined"
-                    size="small"
-                    helperText="ID único de la empresa"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Client ID (Username)"
-                    value={configuracionBusinessCentral.username}
-                    onChange={(e) => setConfiguracionBusinessCentral(prev => ({ ...prev, username: e.target.value }))}
-                    variant="outlined"
-                    size="small"
-                    helperText="Application (client) ID"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Client Secret (Password)"
-                    type="password"
-                    value={configuracionBusinessCentral.password}
-                    onChange={(e) => setConfiguracionBusinessCentral(prev => ({ ...prev, password: e.target.value }))}
-                    variant="outlined"
-                    size="small"
-                    helperText="Secret del cliente"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Environment"
-                    value={configuracionBusinessCentral.environment}
-                    onChange={(e) => setConfiguracionBusinessCentral(prev => ({ ...prev, environment: e.target.value as 'sandbox' | 'production' | 'SB110225' }))}
-                    variant="outlined"
-                    size="small"
-                    helperText="Sandbox, Production, o código específico"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Base URL"
-                    value={configuracionBusinessCentral.baseUrl}
-                    onChange={(e) => setConfiguracionBusinessCentral(prev => ({ ...prev, baseUrl: e.target.value }))}
-                    variant="outlined"
-                    size="small"
-                    helperText="URL base de la API"
-                  />
-                </Grid>
-              </Grid>
-
-              <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={probarConexionBusinessCentral}
-                  sx={{ minWidth: '200px' }}
-                >
-                  🔍 Probar Conexión
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="info"
-                  onClick={ejecutarTestPostmanBusinessCentral}
-                  sx={{ minWidth: '200px' }}
-                >
-                  🧪 Test Tipo Postman
-                </Button>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={configuracionBusinessCentral.habilitado}
-                      onChange={(e) => setConfiguracionBusinessCentral(prev => ({ ...prev, habilitado: e.target.checked }))}
-                    />
-                  }
-                  label="Habilitar Business Central"
-                />
-              </Box>
-
-              <Box sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Estado:</strong> {configuracionBusinessCentral.habilitado ? '✅ Conectado' : '❌ Desconectado'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Environment:</strong> {configuracionBusinessCentral.environment}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Sincronización:</strong> {configuracionBusinessCentral.sincronizacionAutomatica ? 'Activada' : 'Desactivada'}
-                </Typography>
-              </Box>
-            </Box>
-          )}
-
-          {/* Pestaña Test Postman */}
-          {tabSuper === 1 && (
-            <Box sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom sx={{ color: '#1976d2' }}>
-                🧪 Test Tipo Postman - Business Central API
-              </Typography>
-              
-              <Button
-                variant="contained"
-                color="info"
-                onClick={ejecutarTestPostmanBusinessCentral}
-                size="large"
-                sx={{ mb: 2 }}
-              >
-                ▶️ Ejecutar Test Completo
-              </Button>
-
-              {resultadosTestPostman && (
-                <Box sx={{ mt: 2 }}>
-                  {resultadosTestPostman.loading ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Typography>{resultadosTestPostman.message}</Typography>
-                    </Box>
-                  ) : (
-                    <Box>
-                      <Typography variant="h6" color={resultadosTestPostman.success ? 'success.main' : 'error.main'}>
-                        {resultadosTestPostman.message}
-                      </Typography>
-                      
-                      {resultadosTestPostman.summary && (
-                        <Box sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                          <Typography variant="subtitle1" gutterBottom>📊 Resumen:</Typography>
-                          <Typography variant="body2">Total de pasos: {resultadosTestPostman.summary.totalSteps}</Typography>
-                          <Typography variant="body2" color="success.main">Exitosos: {resultadosTestPostman.summary.successfulSteps}</Typography>
-                          <Typography variant="body2" color="error.main">Fallidos: {resultadosTestPostman.summary.failedSteps}</Typography>
-                          <Typography variant="body2">Empresa encontrada: {resultadosTestPostman.summary.companyFound ? '✅ Sí' : '❌ No'}</Typography>
-                          {resultadosTestPostman.summary.companyName && (
-                            <Typography variant="body2">Nombre: {resultadosTestPostman.summary.companyName}</Typography>
-                          )}
-                        </Box>
-                      )}
-
-                      {resultadosTestPostman.steps && (
-                        <Box sx={{ mt: 2 }}>
-                          <Typography variant="subtitle1" gutterBottom>🔍 Detalles de cada paso:</Typography>
-                          {resultadosTestPostman.steps.map((step: any, idx: number) => (
-                            <Box key={idx} sx={{ mt: 2, p: 2, border: 1, borderColor: step.success ? 'success.main' : 'error.main', borderRadius: 1 }}>
-                              <Typography variant="subtitle2" color={step.success ? 'success.main' : 'error.main'}>
-                                {step.name} {step.success ? '✅' : '❌'}
-                              </Typography>
-                              {step.url && (
-                                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                                  <strong>{step.method || 'GET'}:</strong> {step.url}
-                                </Typography>
-                              )}
-                              {step.responseStatus && (
-                                <Typography variant="body2">
-                                  Status: {step.responseStatus} {step.responseStatusText}
-                                </Typography>
-                              )}
-                              {step.error && (
-                                <Typography variant="body2" color="error.main">
-                                  Error: {step.error}
-                                </Typography>
-                              )}
-                              {step.responseBody && typeof step.responseBody === 'object' && (
-                                <Box sx={{ mt: 1, p: 1, bgcolor: '#f9f9f9', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                                  <pre>{JSON.stringify(step.responseBody, null, 2)}</pre>
-                                </Box>
-                              )}
-                            </Box>
-                          ))}
-                        </Box>
-                      )}
-                    </Box>
-                  )}
-                </Box>
-              )}
-            </Box>
-          )}
-
-          {/* Pestaña Configuración */}
-          {tabSuper === 2 && (
-            <Box sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom sx={{ color: '#1976d2' }}>
-                ⚙️ Configuración del Sistema
-              </Typography>
-              
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <Box sx={{ p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                    <Typography variant="subtitle1" gutterBottom>📊 Estado del Sistema:</Typography>
-                    <Typography variant="body2">• Business Central: {configuracionBusinessCentral.habilitado ? '✅ Conectado' : '❌ Desconectado'}</Typography>
-                    <Typography variant="body2">• Base de datos: ✅ Conectada (Prisma)</Typography>
-                    <Typography variant="body2">• Inventario: ✅ Activo</Typography>
-                    <Typography variant="body2">• Pre-cuentas: ✅ Habilitadas</Typography>
-                    <Typography variant="body2">• Formato Listing: ✅ Configurado</Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Diálogo Test Postman Independiente */}
-      <Dialog 
-        open={openTestPostman} 
-        onClose={() => setOpenTestPostman(false)}
-        maxWidth="lg"
-        fullWidth
-        sx={{ '& .MuiDialog-paper': { minHeight: '80vh' } }}
-      >
-        <DialogTitle sx={{ bgcolor: '#2196f3', color: 'white' }}>
-          🧪 Test Tipo Postman - Resultados Detallados
-        </DialogTitle>
-        <DialogContent>
-          {/* Contenido idéntico a la pestaña Test Postman del SUPER */}
-          {resultadosTestPostman && (
-            <Box sx={{ mt: 2 }}>
-              {resultadosTestPostman.loading ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Typography>{resultadosTestPostman.message}</Typography>
-                </Box>
-              ) : (
-                <Box>
-                  <Typography variant="h6" color={resultadosTestPostman.success ? 'success.main' : 'error.main'}>
-                    {resultadosTestPostman.message}
-                  </Typography>
-                  
-                  {resultadosTestPostman.timestamp && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Ejecutado: {new Date(resultadosTestPostman.timestamp).toLocaleString()}
-                    </Typography>
-                  )}
-
-                  {resultadosTestPostman.config && (
-                    <Box sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                      <Typography variant="subtitle1" gutterBottom>⚙️ Configuración utilizada:</Typography>
-                      <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                        Tenant ID: {resultadosTestPostman.config.tenantId}<br/>
-                        Environment: {resultadosTestPostman.config.environment}<br/>
-                        Company ID: {resultadosTestPostman.config.companyId}<br/>
-                        Base URL: {resultadosTestPostman.config.baseUrl}
-                      </Typography>
-                    </Box>
-                  )}
-                  
-                  {resultadosTestPostman.summary && (
-                    <Box sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                      <Typography variant="subtitle1" gutterBottom>📊 Resumen:</Typography>
-                      <Typography variant="body2">Total de pasos: {resultadosTestPostman.summary.totalSteps}</Typography>
-                      <Typography variant="body2" color="success.main">Exitosos: {resultadosTestPostman.summary.successfulSteps}</Typography>
-                      <Typography variant="body2" color="error.main">Fallidos: {resultadosTestPostman.summary.failedSteps}</Typography>
-                      <Typography variant="body2">Empresa encontrada: {resultadosTestPostman.summary.companyFound ? '✅ Sí' : '❌ No'}</Typography>
-                      {resultadosTestPostman.summary.companyName && (
-                        <Typography variant="body2">Nombre: {resultadosTestPostman.summary.companyName}</Typography>
-                      )}
-                    </Box>
-                  )}
-
-                  {resultadosTestPostman.steps && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="subtitle1" gutterBottom>🔍 Detalles de cada paso:</Typography>
-                      {resultadosTestPostman.steps.map((step: any, idx: number) => (
-                        <Box key={idx} sx={{ mt: 2, p: 2, border: 1, borderColor: step.success ? 'success.main' : 'error.main', borderRadius: 1 }}>
-                          <Typography variant="subtitle2" color={step.success ? 'success.main' : 'error.main'}>
-                            Paso {step.step}: {step.name} {step.success ? '✅' : '❌'}
-                          </Typography>
-                          {step.url && (
-                            <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem', mt: 1 }}>
-                              <strong>{step.method || 'GET'}:</strong> {step.url}
-                            </Typography>
-                          )}
-                          {step.responseStatus && (
-                            <Typography variant="body2">
-                              Status: {step.responseStatus} {step.responseStatusText}
-                            </Typography>
-                          )}
-                          {step.error && (
-                            <Typography variant="body2" color="error.main">
-                              Error: {step.error}
-                            </Typography>
-                          )}
-                          {step.responseBody && typeof step.responseBody === 'object' && (
-                            <Box sx={{ mt: 1, p: 1, bgcolor: '#f9f9f9', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.75rem', maxHeight: '300px', overflow: 'auto' }}>
-                              <pre>{JSON.stringify(step.responseBody, null, 2)}</pre>
-                            </Box>
-                          )}
-                        </Box>
-                      ))}
-                    </Box>
-                  )}
-
-                  {resultadosTestPostman.errorDetails && (
-                    <Box sx={{ mt: 2, p: 2, bgcolor: '#ffebee', borderRadius: 1 }}>
-                      <Typography variant="subtitle1" color="error.main" gutterBottom>❌ Detalles del Error:</Typography>
-                      <Typography variant="body2" color="error.main" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                        {resultadosTestPostman.errorDetails.name}: {resultadosTestPostman.errorDetails.message}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              )}
-            </Box>
-          )}
         </DialogContent>
       </Dialog>
 
@@ -1772,67 +1590,6 @@ export default function Home() {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Diálogo de Selección de Mesas */}
-      <Dialog open={openSeleccionMesa} onClose={() => setOpenSeleccionMesa(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ bgcolor: '#2196f3', color: 'white' }}>
-          🪑 Selección de Mesa
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Seleccione una mesa para el pedido
-            </Typography>
-            
-            <Grid container spacing={2}>
-              {mesas.map((mesa) => (
-                <Grid item xs={3} key={mesa.numero}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    size="large"
-                    onClick={() => {
-                      setPedidoEnEdicion({
-                        id: Date.now(),
-                        tipo: 'mesa',
-                        ref: mesa.numero.toString()
-                      });
-                      setOpenSeleccionMesa(false);
-                      mostrarNotificacion(`Mesa ${mesa.numero} seleccionada`, 'success');
-                    }}
-                    sx={{ 
-                      height: 80,
-                      fontSize: '1.2rem',
-                      fontWeight: 'bold',
-                      bgcolor: mesa.estado === 'libre' ? '#4caf50' : 
-                               mesa.estado === 'ocupada' ? '#f44336' : '#ff9800',
-                      '&:hover': {
-                        bgcolor: mesa.estado === 'libre' ? '#45a049' : 
-                                 mesa.estado === 'ocupada' ? '#d32f2f' : '#f57c00'
-                      }
-                    }}
-                  >
-                    Mesa {mesa.numero}
-                    <br />
-                    <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-                      {mesa.estado === 'libre' ? 'LIBRE' : 
-                       mesa.estado === 'ocupada' ? 'OCUPADA' : 'RESERVADA'}
-                    </Typography>
-                  </Button>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-        </DialogContent>
-      </Dialog>
-
-      {/* Diálogo de Gestión de Turnos */}
-      <GestionTurnos 
-        open={openGestionTurnos}
-        onClose={() => setOpenGestionTurnos(false)}
-        sucursal={configuracionAlmacenes.almacenActual}
-        codigoPV={configuracionAlmacenes.codigoPV}
-      />
 
       {/* Notificaciones */}
       <Snackbar
