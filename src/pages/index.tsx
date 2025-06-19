@@ -1096,13 +1096,13 @@ export default function Home() {
   }, [selectedRow, productos.length, eliminarProducto]);
 
   return (
-    <Box sx={{ minHeight: '100vh', maxHeight: '100vh', overflow: 'hidden', bgcolor: '#e5e5e5', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#e5e5e5', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Head>
         <title>Sistema de Facturación - Pre-Cuenta y Listing</title>
       </Head>
 
       {/* Header con información del usuario y empresa */}
-      <Box sx={{ bgcolor: '#1976d2', color: 'white', p: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ bgcolor: '#1976d2', color: 'white', p: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 56 }}>
         <Typography variant="h6">{empresa.nombre}</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="body2">{configuracionAlmacenes.almacenActual}</Typography>
@@ -1142,140 +1142,114 @@ export default function Home() {
         </Box>
       </Box>
 
-      {/* Contenido principal */}
-      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      {/* Contenido principal: tres paneles */}
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, height: 'calc(100vh - 56px)', overflow: 'hidden' }}>
         {/* Panel izquierdo - Acciones */}
-        <Box sx={{ width: 200, bgcolor: '#f5f5f5', borderRight: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
-          <Typography variant="h6" sx={{ p: 1, bgcolor: '#e0e0e0', textAlign: 'center' }}>
-            ACCIONES
-          </Typography>
-          <Box sx={{ flex: 1, overflow: 'auto' }}>
-            {accionesIzquierda.map((accion) => (
+        <Box sx={{ width: 260, bgcolor: '#222', p: 0, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 1 }}>
+          {/* Botones de acciones rápidas */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+            <Button fullWidth sx={{ bgcolor: '#222', color: 'white', fontWeight: 'bold', fontSize: '1rem', py: 1.2, borderRadius: 0, borderBottom: '1px solid #333', '&:hover': { bgcolor: '#333' } }} onClick={() => mostrarNotificacion('Función no implementada', 'info')}>DESCUENTO 3ERA/4TA EDAD</Button>
+            <Button fullWidth sx={{ bgcolor: '#222', color: 'white', fontWeight: 'bold', fontSize: '1rem', py: 1.2, borderRadius: 0, borderBottom: '1px solid #333', '&:hover': { bgcolor: '#333' } }} onClick={() => mostrarNotificacion('Función no implementada', 'info')}>DESCUENTO</Button>
+            <Button fullWidth sx={{ bgcolor: '#222', color: 'white', fontWeight: 'bold', fontSize: '1rem', py: 1.2, borderRadius: 0, borderBottom: '1px solid #333', '&:hover': { bgcolor: '#333' } }} onClick={limpiarPedido}>CANCELAR VENTA</Button>
+            <Button fullWidth sx={{ bgcolor: '#222', color: 'white', fontWeight: 'bold', fontSize: '1rem', py: 1.2, borderRadius: 0, borderBottom: '1px solid #333', '&:hover': { bgcolor: '#333' } }} onClick={() => mostrarNotificacion('Función no implementada', 'info')}>SUSPENDER VENTA</Button>
+            <Button fullWidth sx={{ bgcolor: '#222', color: 'white', fontWeight: 'bold', fontSize: '1rem', py: 1.2, borderRadius: 0, borderBottom: '1px solid #333', '&:hover': { bgcolor: '#333' } }} onClick={() => mostrarNotificacion('Función no implementada', 'info')}>LLAMAR VENTA</Button>
+            <Button fullWidth sx={{ bgcolor: '#222', color: 'white', fontWeight: 'bold', fontSize: '1rem', py: 1.2, borderRadius: 0, borderBottom: '1px solid #333', '&:hover': { bgcolor: '#333' } }} onClick={eliminarProducto}>ANULAR PRODUCTO</Button>
+            <Button fullWidth sx={{ bgcolor: '#222', color: 'white', fontWeight: 'bold', fontSize: '1rem', py: 1.2, borderRadius: 0, borderBottom: '1px solid #333', '&:hover': { bgcolor: '#333' } }} onClick={() => mostrarNotificacion('Función no implementada', 'info')}>REIMPRIMIR RECIBO</Button>
+            <Button fullWidth sx={{ bgcolor: '#222', color: 'white', fontWeight: 'bold', fontSize: '1rem', py: 1.2, borderRadius: 0, borderBottom: '1px solid #333', '&:hover': { bgcolor: '#333' } }} onClick={() => mostrarNotificacion('Función no implementada', 'info')}>BUSCAR PRODUCTO</Button>
+            <Button fullWidth sx={{ bgcolor: '#222', color: 'white', fontWeight: 'bold', fontSize: '1rem', py: 1.2, borderRadius: 0, borderBottom: '1px solid #333', '&:hover': { bgcolor: '#333' } }} onClick={() => mostrarNotificacion('Función no implementada', 'info')}>DETALLE DE PRODUCTO</Button>
+            <Button fullWidth sx={{ bgcolor: '#222', color: 'white', fontWeight: 'bold', fontSize: '1rem', py: 1.2, borderRadius: 0, borderBottom: '1px solid #333', '&:hover': { bgcolor: '#333' } }} onClick={() => mostrarNotificacion('Función no implementada', 'info')}>ABRIR CAJÓN</Button>
+          </Box>
+          {/* Botones delivery/pickup */}
+          <Box sx={{ display: 'flex', gap: 1, mt: 2, mb: 1, px: 1 }}>
+            <Button fullWidth sx={{ bgcolor: '#1976d2', color: 'white', fontWeight: 'bold', fontSize: '1rem', borderRadius: 1, '&:hover': { bgcolor: '#1565c0' } }} onClick={() => mostrarNotificacion('Función no implementada', 'info')}>NUEVO DELIVERY</Button>
+            <Button fullWidth sx={{ bgcolor: '#388e3c', color: 'white', fontWeight: 'bold', fontSize: '1rem', borderRadius: 1, '&:hover': { bgcolor: '#2e7d32' } }} onClick={() => mostrarNotificacion('Función no implementada', 'info')}>NUEVO PICKUP</Button>
+          </Box>
+          {/* Botón calendario reservas */}
+          <Button fullWidth sx={{ bgcolor: '#ff9800', color: 'white', fontWeight: 'bold', fontSize: '1rem', borderRadius: 1, mb: 2, mx: 1, py: 1.2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, '&:hover': { bgcolor: '#f57c00' } }} onClick={() => mostrarNotificacion('Función no implementada', 'info')}>
+            <span style={{ fontSize: 22, marginRight: 8 }}>📅</span> CALENDARIO RESERVAS (0)
+          </Button>
+          {/* Grid de mesas */}
+          <Grid container spacing={1} sx={{ px: 1, mb: 2 }}>
+            {mesas.slice(0, 10).map((mesa) => (
+              <Grid item xs={6} key={mesa.numero}>
+                <Button fullWidth sx={{ bgcolor: '#388e3c', color: 'white', fontWeight: 'bold', fontSize: '1.1rem', borderRadius: 1, height: 48, mb: 0.5, '&:hover': { bgcolor: '#2e7d32' } }} onClick={() => {
+                  setPedidoEnEdicion({ id: Date.now(), tipo: 'mesa', ref: mesa.numero.toString() });
+                  mostrarNotificacion(`Mesa ${mesa.numero} seleccionada`, 'success');
+                }}>
+                  {mesa.numero}
+                  <Typography variant="caption" sx={{ display: 'block', fontSize: '0.8rem', color: 'white', fontWeight: 'normal' }}>LIBRE</Typography>
+                </Button>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+        {/* Panel central - Tabla de productos */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: '#fff', px: 2, py: 2 }}>
+          {/* Botones de tipo de cliente */}
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            {['CONSUMIDOR FINAL', 'CLIENTE RTN', 'CLIENTE CRÉDITO', 'CLIENTE LEAL'].map((tipo, idx) => (
               <Button
-                key={accion}
-                fullWidth
-                variant="outlined"
-                sx={{ 
-                  m: 0.5, 
-                  fontSize: '0.75rem',
-                  bgcolor: accion === 'IMPRIMIR CUENTA' ? '#e8f5e8' : 'white',
-                  border: accion === 'IMPRIMIR CUENTA' ? '2px solid #4caf50' : '1px solid #ccc',
-                  fontWeight: accion === 'IMPRIMIR CUENTA' ? 'bold' : 'normal'
-                }}
-                onClick={() => {
-                  switch (accion) {
-                    case 'IMPRIMIR CUENTA':
-                      imprimirPreCuenta();
-                      break;
-                    case 'ANULAR PRODUCTO':
-                      eliminarProducto();
-                      break;
-                    default:
-                      mostrarNotificacion(`Función ${accion} disponible en versión completa`, 'info');
-                  }
+                key={tipo}
+                onClick={() => setTipoCliente(['final', 'rtn', 'credito', 'leal'][idx])}
+                sx={{
+                  flex: 1,
+                  bgcolor: tipoCliente === ['final', 'rtn', 'credito', 'leal'][idx] ? '#388e3c' : '#fff',
+                  color: tipoCliente === ['final', 'rtn', 'credito', 'leal'][idx] ? 'white' : '#388e3c',
+                  border: '2px solid #388e3c',
+                  fontWeight: 'bold',
+                  fontSize: '1.1rem',
+                  borderRadius: 0,
+                  boxShadow: 'none',
+                  py: 2,
+                  '&:hover': { bgcolor: '#43a047', color: 'white' }
                 }}
               >
-                {accion === 'IMPRIMIR CUENTA' ? '📄 ' + accion : accion}
+                {tipo}
               </Button>
             ))}
-            <Button
-              fullWidth
-              variant="outlined"
-              sx={{ 
-                m: 0.5, 
-                fontSize: '0.75rem',
-                bgcolor: '#e3f2fd',
-                border: '2px solid #2196f3',
-                fontWeight: 'bold'
-              }}
-              onClick={() => setOpenSeleccionMesa(true)}
-            >
-              🪑 SELECCIONAR MESA
-            </Button>
-            <Button
-              fullWidth
-              variant="outlined"
-              sx={{ 
-                m: 0.5, 
-                fontSize: '0.75rem',
-                bgcolor: '#fff3e0',
-                border: '2px solid #ff9800',
-                fontWeight: 'bold'
-              }}
-              onClick={limpiarPedido}
-            >
-              🗑️ LIMPIAR PEDIDO
-            </Button>
           </Box>
-        </Box>
-
-        {/* Panel central - Tabla de productos */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ p: 1, bgcolor: '#f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">
-              {pedidoEnEdicion?.tipo === 'mesa' ? `Mesa ${pedidoEnEdicion.ref}` : 'Venta Actual'}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Select value={tipoCliente} onChange={(e) => setTipoCliente(e.target.value)} size="small">
-                {tiposCliente.map((tipo) => (
-                  <MenuItem key={tipo.value} value={tipo.value}>
-                    {tipo.label}
-                  </MenuItem>
-                ))}
-              </Select>
-              <Button
-                variant="contained"
-                color="success"
-                size="small"
-                onClick={imprimirPreCuenta}
-                disabled={productos.length === 0}
-                sx={{ minWidth: '120px' }}
-              >
-                📄 CUENTA
-              </Button>
-            </Box>
-          </Box>
-          
-          <TableContainer component={Paper} sx={{ flex: 1 }}>
+          {/* Tabla de productos */}
+          <TableContainer component={Paper} sx={{ flex: 1, mb: 2, boxShadow: 'none', border: '1px solid #e0e0e0' }}>
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Descripción</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>Precio Unit.</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>Cant.</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>Total</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', width: 80 }}>Editar</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>Descripción</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>Precio Unitario</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>Cant.</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>Precio</TableCell>
+                  <TableCell align="center" sx={{ width: 40 }}></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {productos.map((producto, idx) => (
-                  <TableRow 
-                    key={idx} 
+                  <TableRow
+                    key={idx}
                     selected={selectedRow === idx}
                     onClick={() => setSelectedRow(idx)}
-                    sx={{ 
-                      cursor: 'pointer',
+                    sx={{
+                      bgcolor: selectedRow === idx ? '#e3f2fd' : 'inherit',
                       '&:hover': { bgcolor: '#f5f5f5' },
-                      bgcolor: selectedRow === idx ? '#e3f2fd' : 'inherit'
+                      fontSize: '1rem',
+                      cursor: 'pointer'
                     }}
                   >
                     <TableCell>{producto.descripcion}</TableCell>
                     <TableCell align="right">L{producto.precioUnitario.toFixed(2)}</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>{producto.cantidad}</TableCell>
+                    <TableCell align="center">
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                        <IconButton size="small" onClick={e => { e.stopPropagation(); if (producto.cantidad > 1) setProductos(prev => prev.map((p, i) => i === idx ? { ...p, cantidad: p.cantidad - 1, precio: (p.cantidad - 1) * p.precioUnitario } : p)); }}>
+                          <RemoveIcon />
+                        </IconButton>
+                        <Typography sx={{ fontWeight: 'bold', minWidth: 24, textAlign: 'center' }}>{producto.cantidad}</Typography>
+                        <IconButton size="small" onClick={e => { e.stopPropagation(); setProductos(prev => prev.map((p, i) => i === idx ? { ...p, cantidad: p.cantidad + 1, precio: (p.cantidad + 1) * p.precioUnitario } : p)); }}>
+                          <AddIcon />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>L{producto.precio.toFixed(2)}</TableCell>
                     <TableCell align="center">
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          abrirEditarCantidad(idx);
-                        }}
-                        sx={{ 
-                          color: '#1976d2',
-                          '&:hover': { bgcolor: '#e3f2fd' }
-                        }}
-                      >
-                        ✏️
+                      <IconButton size="small" onClick={e => { e.stopPropagation(); setProductos(prev => prev.filter((_, i) => i !== idx)); setSelectedRow(0); }}>
+                        <DeleteIcon sx={{ color: '#f44336' }} />
                       </IconButton>
                     </TableCell>
                   </TableRow>
@@ -1290,64 +1264,233 @@ export default function Home() {
               </TableBody>
             </Table>
           </TableContainer>
-
-          {/* Totales */}
-          <Box sx={{ p: 2, bgcolor: '#f9f9f9', borderTop: 1, borderColor: 'divider' }}>
-            <Grid container spacing={2}>
-              <Grid item xs={8}>
-                <Typography variant="body1">Subtotal: L{subTotal.toFixed(2)}</Typography>
-                <Typography variant="body1">ISV (15%): L{impuesto.toFixed(2)}</Typography>
-                <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#1976d2' }}>
-                  Total: L{total.toFixed(2)}
-                </Typography>
-              </Grid>
-              <Grid item xs={4}>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                  onClick={() => setOpenCobro(true)}
-                  disabled={productos.length === 0}
-                  sx={{ mb: 1 }}
-                >
-                  💰 COBRAR
-                </Button>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  color="success"
-                  size="medium"
-                  onClick={imprimirPreCuenta}
-                  disabled={productos.length === 0}
-                >
-                  📄 CUENTA
-                </Button>
-              </Grid>
-            </Grid>
+          {/* Totales y botón cobrar */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, mt: 1 }}>
+            <Typography sx={{ fontSize: '1.1rem' }}>Sub-Total: <b>L{subTotal.toFixed(2)}</b></Typography>
+            <Typography sx={{ fontSize: '1.1rem' }}>Impuesto: <b>L{impuesto.toFixed(2)}</b></Typography>
+            <Typography sx={{ fontSize: '1.1rem' }}>Venta: <b>L{subTotal.toFixed(2)}</b></Typography>
+            <Typography sx={{ fontSize: '1.1rem' }}>Pagado: <b>L0.00</b></Typography>
+            <Typography sx={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#388e3c', mt: 1 }}>Total: L{total.toFixed(2)}</Typography>
+            <Button
+              variant="contained"
+              color="success"
+              sx={{ mt: 2, width: 320, fontSize: '1.3rem', fontWeight: 'bold', alignSelf: 'center', py: 2, borderRadius: 1 }}
+              onClick={() => setOpenCobro(true)}
+              disabled={productos.length === 0}
+            >
+              COBRAR
+            </Button>
           </Box>
         </Box>
-
-        {/* Panel derecho - Categorías */}
-        <Box sx={{ width: 250, bgcolor: '#f5f5f5', borderLeft: 1, borderColor: 'divider' }}>
-          <Typography variant="h6" sx={{ p: 1, bgcolor: '#e0e0e0', textAlign: 'center' }}>
-            CATEGORÍAS
-          </Typography>
-          <Box sx={{ height: 'calc(100% - 48px)', overflow: 'auto' }}>
+        {/* Panel derecho - Teclado y categorías */}
+        <Box sx={{ width: 340, bgcolor: '#f5f5f5', borderLeft: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column', p: 2, gap: 2 }}>
+          {/* Teclado numérico grande */}
+          <Box sx={{ bgcolor: '#d32f2f', borderRadius: 2, p: 2, mb: 2, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gridTemplateRows: 'repeat(4, 64px)', gap: 1 }}>
+            {[
+              '7', '8', '9', 'QTY',
+              '4', '5', '6', '←',
+              '1', '2', '3', 'CL',
+              '0', '00', '.', '✔'
+            ].map((key, idx) => (
+              <Button
+                key={key + idx}
+                sx={{
+                  bgcolor: key === 'QTY' || key === 'CL' || key === '✔' ? '#b71c1c' : 'white',
+                  color: key === 'QTY' || key === 'CL' || key === '✔' ? 'white' : '#d32f2f',
+                  fontWeight: 'bold',
+                  fontSize: '1.5rem',
+                  borderRadius: 2,
+                  boxShadow: 'none',
+                  border: '1px solid #b71c1c',
+                  width: '100%',
+                  height: '100%',
+                  '&:hover': { bgcolor: key === 'QTY' || key === 'CL' || key === '✔' ? '#c62828' : '#f5f5f5' }
+                }}
+                onClick={() => {
+                  if (key === 'QTY') {
+                    if (productos.length > 0) abrirEditarCantidad(selectedRow);
+                  } else if (key === 'CL') {
+                    setTempQuantity('');
+                  } else if (key === '←') {
+                    setTempQuantity((prev) => prev.slice(0, -1));
+                  } else if (key === '✔') {
+                    if (openEditQuantity) guardarCantidadEditada();
+                  } else {
+                    // Números y punto
+                    setTempQuantity((prev) => (prev.length < 4 ? prev + key : prev));
+                  }
+                }}
+              >
+                {key}
+              </Button>
+            ))}
+          </Box>
+          {/* Categorías de productos en grid */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, mb: 2 }}>
             {categoriasDerecha.map((categoria) => (
               <Button
                 key={categoria}
                 fullWidth
-                variant="outlined"
-                sx={{ m: 0.5, fontSize: '0.7rem' }}
+                sx={{
+                  bgcolor: '#388e3c',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '1rem',
+                  borderRadius: 1,
+                  py: 2,
+                  textTransform: 'uppercase',
+                  '&:hover': { bgcolor: '#2e7d32' }
+                }}
                 onClick={() => setCategoriaActiva(categoria)}
               >
                 {categoria}
               </Button>
             ))}
           </Box>
+          {/* Acciones rápidas de usuario */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, mt: 'auto' }}>
+            {[
+              { label: 'INICIAR USUARIO', onClick: () => mostrarNotificacion('Función no implementada', 'info') },
+              { label: 'FACTURA', onClick: () => mostrarNotificacion('Función no implementada', 'info') },
+              { label: 'SALIR USUARIO', onClick: () => mostrarNotificacion('Función no implementada', 'info') },
+              { label: 'GERENTE', onClick: () => setOpenGerente(true) },
+              { label: 'PEDIDOS DE BARRA', onClick: () => mostrarNotificacion('Función no implementada', 'info') },
+              { label: 'GESTIÓN PEDIDOS', onClick: () => mostrarNotificacion('Función no implementada', 'info') },
+              { label: 'RESUMEN DE TURNO', onClick: () => mostrarNotificacion('Función no implementada', 'info') },
+              { label: 'SUPER', onClick: () => setOpenSuper(true) },
+              { label: 'COMANDA COCINA', onClick: () => mostrarNotificacion('Función no implementada', 'info') },
+            ].map(({ label, onClick }) => (
+              <Button
+                key={label}
+                fullWidth
+                sx={{
+                  bgcolor: '#222',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '1rem',
+                  borderRadius: 1,
+                  py: 2,
+                  textTransform: 'uppercase',
+                  '&:hover': { bgcolor: '#333' }
+                }}
+                onClick={onClick}
+              >
+                {label}
+              </Button>
+            ))}
+          </Box>
         </Box>
       </Box>
+
+      {/* Diálogo de Gestión de Turnos */}
+      <GestionTurnos 
+        open={openGestionTurnos}
+        onClose={() => setOpenGestionTurnos(false)}
+        sucursal={configuracionAlmacenes.almacenActual}
+        codigoPV={configuracionAlmacenes.codigoPV}
+      />
+
+      {/* Diálogo de Cobro */}
+      <Dialog open={openCobro} onClose={() => setOpenCobro(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ bgcolor: '#4caf50', color: 'white' }}>
+          💰 COBRO - Seleccionar Medio de Pago
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Total a Cobrar: L. {total.toFixed(2)}
+            </Typography>
+            <Grid container spacing={2}>
+              {mediosCobro.map((medio) => (
+                <Grid item xs={6} key={medio}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    onClick={() => handleCobrar(medio)}
+                    sx={{ 
+                      height: 60, 
+                      fontSize: '1rem',
+                      textTransform: 'none',
+                      bgcolor: medio === 'EFECTIVO' ? '#4caf50' : '#2196f3',
+                      '&:hover': {
+                        bgcolor: medio === 'EFECTIVO' ? '#45a049' : '#1976d2'
+                      }
+                    }}
+                  >
+                    {medio}
+                  </Button>
+                </Grid>
+              ))}
+            </Grid>
+            <Box sx={{ mt: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                💡 <strong>Información:</strong>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                • Turno actual: {turnoActual ? `#${turnoActual.numero}` : 'No hay turno abierto'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                • Usuario: {usuarioActual}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                • Sucursal: {configuracionAlmacenes.almacenActual}
+              </Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Resumen de Factura */}
+      <Dialog open={openResumen} onClose={() => setOpenResumen(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ bgcolor: '#2196f3', color: 'white' }}>
+          📄 Resumen de Factura
+        </DialogTitle>
+        <DialogContent>
+          {factura && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Factura: {factura.cai?.serie}-{factura.correlativo?.toString().padStart(8, '0')}
+              </Typography>
+              <TableContainer component={Paper} sx={{ mt: 2 }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Producto</TableCell>
+                      <TableCell align="right">Cantidad</TableCell>
+                      <TableCell align="right">Precio</TableCell>
+                      <TableCell align="right">Total</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {factura.productos?.map((producto: any, index: number) => (
+                      <TableRow key={index}>
+                        <TableCell>{producto.descripcion}</TableCell>
+                        <TableCell align="right">{producto.cantidad}</TableCell>
+                        <TableCell align="right">L. {producto.precioUnitario?.toFixed(2)}</TableCell>
+                        <TableCell align="right">L. {producto.precio?.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Box sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+                <Typography variant="h6">Totales:</Typography>
+                <Typography>Subtotal: L. {factura.subTotal?.toFixed(2)}</Typography>
+                <Typography>ISV 15%: L. {factura.isv15?.toFixed(2)}</Typography>
+                {factura.isv18 > 0 && (
+                  <Typography>ISV 18%: L. {factura.isv18?.toFixed(2)}</Typography>
+                )}
+                <Typography variant="h6" color="primary">
+                  Total: L. {factura.total?.toFixed(2)}
+                </Typography>
+                <Typography>Medio de pago: {factura.medioPago}</Typography>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Diálogo para Editar Cantidad */}
       <Dialog open={openEditQuantity} onClose={cancelarEdicion} maxWidth="sm" fullWidth>
@@ -1364,7 +1507,6 @@ export default function Home() {
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   Precio unitario: L{productos[editingProductIndex].precioUnitario.toFixed(2)}
                 </Typography>
-                
                 <TextField
                   fullWidth
                   label="Nueva cantidad"
@@ -1377,7 +1519,6 @@ export default function Home() {
                   autoFocus
                   sx={{ mb: 2 }}
                 />
-                
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                   <Button
                     variant="outlined"
@@ -1409,7 +1550,6 @@ export default function Home() {
             <Typography variant="h6" gutterBottom>
               Seleccione una mesa para el pedido
             </Typography>
-            
             <Grid container spacing={2}>
               {mesas.map((mesa) => (
                 <Grid item xs={3} key={mesa.numero}>
@@ -1452,14 +1592,6 @@ export default function Home() {
         </DialogContent>
       </Dialog>
 
-      {/* Diálogo de Gestión de Turnos */}
-      <GestionTurnos 
-        open={openGestionTurnos}
-        onClose={() => setOpenGestionTurnos(false)}
-        sucursal={configuracionAlmacenes.almacenActual}
-        codigoPV={configuracionAlmacenes.codigoPV}
-      />
-
       {/* Diálogo de categorías */}
       <Dialog open={!!categoriaActiva} onClose={() => setCategoriaActiva(null)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ bgcolor: '#e3f2fd' }}>{categoriaActiva}</DialogTitle>
@@ -1482,112 +1614,6 @@ export default function Home() {
               </Grid>
             ))}
           </Grid>
-        </DialogContent>
-      </Dialog>
-
-      {/* Diálogo de Cobro */}
-      <Dialog open={openCobro} onClose={() => setOpenCobro(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ bgcolor: '#4caf50', color: 'white' }}>
-          💰 COBRO - Seleccionar Medio de Pago
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Total a Cobrar: L. {total.toFixed(2)}
-            </Typography>
-            
-            <Grid container spacing={2}>
-              {mediosCobro.map((medio) => (
-                <Grid item xs={6} key={medio}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    color="primary"
-                    size="large"
-                    onClick={() => handleCobrar(medio)}
-                    sx={{ 
-                      height: 60, 
-                      fontSize: '1rem',
-                      textTransform: 'none',
-                      bgcolor: medio === 'EFECTIVO' ? '#4caf50' : '#2196f3',
-                      '&:hover': {
-                        bgcolor: medio === 'EFECTIVO' ? '#45a049' : '#1976d2'
-                      }
-                    }}
-                  >
-                    {medio}
-                  </Button>
-                </Grid>
-              ))}
-            </Grid>
-            
-            <Box sx={{ mt: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                💡 <strong>Información:</strong>
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                • Turno actual: {turnoActual ? `#${turnoActual.numero}` : 'No hay turno abierto'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                • Usuario: {usuarioActual}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                • Sucursal: {configuracionAlmacenes.almacenActual}
-              </Typography>
-            </Box>
-          </Box>
-        </DialogContent>
-      </Dialog>
-
-      {/* Diálogo de Resumen de Factura */}
-      <Dialog open={openResumen} onClose={() => setOpenResumen(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ bgcolor: '#2196f3', color: 'white' }}>
-          📄 Resumen de Factura
-        </DialogTitle>
-        <DialogContent>
-          {factura && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Factura: {factura.cai?.serie}-{factura.correlativo?.toString().padStart(8, '0')}
-              </Typography>
-              
-              <TableContainer component={Paper} sx={{ mt: 2 }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Producto</TableCell>
-                      <TableCell align="right">Cantidad</TableCell>
-                      <TableCell align="right">Precio</TableCell>
-                      <TableCell align="right">Total</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {factura.productos?.map((producto: any, index: number) => (
-                      <TableRow key={index}>
-                        <TableCell>{producto.descripcion}</TableCell>
-                        <TableCell align="right">{producto.cantidad}</TableCell>
-                        <TableCell align="right">L. {producto.precioUnitario?.toFixed(2)}</TableCell>
-                        <TableCell align="right">L. {producto.precio?.toFixed(2)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              
-              <Box sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                <Typography variant="h6">Totales:</Typography>
-                <Typography>Subtotal: L. {factura.subTotal?.toFixed(2)}</Typography>
-                <Typography>ISV 15%: L. {factura.isv15?.toFixed(2)}</Typography>
-                {factura.isv18 > 0 && (
-                  <Typography>ISV 18%: L. {factura.isv18?.toFixed(2)}</Typography>
-                )}
-                <Typography variant="h6" color="primary">
-                  Total: L. {factura.total?.toFixed(2)}
-                </Typography>
-                <Typography>Medio de pago: {factura.medioPago}</Typography>
-              </Box>
-            </Box>
-          )}
         </DialogContent>
       </Dialog>
 
