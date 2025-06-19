@@ -214,13 +214,21 @@ export default function Home() {
     descripcion: string;
   } | null>(null);
 
-  // Estados para gestión de turnos y facturas
+  // Estados para gestión de turnos y mesas
   const [openGestionTurnos, setOpenGestionTurnos] = useState(false);
   const [openHistorialFacturas, setOpenHistorialFacturas] = useState(false);
   const [openEstadisticas, setOpenEstadisticas] = useState(false);
   const [estadisticas, setEstadisticas] = useState<any>(null);
   const [filtroFechaDesde, setFiltroFechaDesde] = useState('');
   const [filtroFechaHasta, setFiltroFechaHasta] = useState('');
+
+  // Estados para gestión de mesas
+  const [mesas, setMesas] = useState(Array.from({ length: 20 }, (_, i) => ({
+    numero: i + 1,
+    estado: 'libre' as 'libre' | 'ocupada' | 'reservada',
+    pedido: null as any
+  })));
+  const [openSeleccionMesa, setOpenSeleccionMesa] = useState(false);
 
   // Cálculos de totales
   const subTotal = productos.reduce((acc, p) => acc + p.precio, 0);
@@ -830,9 +838,9 @@ export default function Home() {
 
   // Función para eliminar producto
   const eliminarProducto = () => {
-    if (productos.length > 0) {
-      setProductos(productos.slice(0, -1));
-      setSelectedRow(Math.max(0, productos.length - 2));
+    if (productos.length > 0 && selectedRow >= 0) {
+      setProductos(prev => prev.filter((_, idx) => idx !== selectedRow));
+      setSelectedRow(prev => Math.max(0, prev - 1));
     }
   };
 
@@ -1073,6 +1081,20 @@ export default function Home() {
                 {accion === 'IMPRIMIR CUENTA' ? '📄 ' + accion : accion}
               </Button>
             ))}
+            <Button
+              fullWidth
+              variant="outlined"
+              sx={{ 
+                m: 0.5, 
+                fontSize: '0.75rem',
+                bgcolor: '#e3f2fd',
+                border: '2px solid #2196f3',
+                fontWeight: 'bold'
+              }}
+              onClick={() => setOpenSeleccionMesa(true)}
+            >
+              🪑 SELECCIONAR MESA
+            </Button>
           </Box>
         </Box>
 
@@ -1748,6 +1770,59 @@ export default function Home() {
               </Box>
             </Box>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Selección de Mesas */}
+      <Dialog open={openSeleccionMesa} onClose={() => setOpenSeleccionMesa(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ bgcolor: '#2196f3', color: 'white' }}>
+          🪑 Selección de Mesa
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Seleccione una mesa para el pedido
+            </Typography>
+            
+            <Grid container spacing={2}>
+              {mesas.map((mesa) => (
+                <Grid item xs={3} key={mesa.numero}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    onClick={() => {
+                      setPedidoEnEdicion({
+                        id: Date.now(),
+                        tipo: 'mesa',
+                        ref: mesa.numero.toString()
+                      });
+                      setOpenSeleccionMesa(false);
+                      mostrarNotificacion(`Mesa ${mesa.numero} seleccionada`, 'success');
+                    }}
+                    sx={{ 
+                      height: 80,
+                      fontSize: '1.2rem',
+                      fontWeight: 'bold',
+                      bgcolor: mesa.estado === 'libre' ? '#4caf50' : 
+                               mesa.estado === 'ocupada' ? '#f44336' : '#ff9800',
+                      '&:hover': {
+                        bgcolor: mesa.estado === 'libre' ? '#45a049' : 
+                                 mesa.estado === 'ocupada' ? '#d32f2f' : '#f57c00'
+                      }
+                    }}
+                  >
+                    Mesa {mesa.numero}
+                    <br />
+                    <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+                      {mesa.estado === 'libre' ? 'LIBRE' : 
+                       mesa.estado === 'ocupada' ? 'OCUPADA' : 'RESERVADA'}
+                    </Typography>
+                  </Button>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
         </DialogContent>
       </Dialog>
 
