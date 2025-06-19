@@ -156,6 +156,71 @@ model VentaDiaria {
 }
 
 // =====================================================
+// MODELO DE FACTURAS PARA PERSISTENCIA
+// =====================================================
+
+model Factura {
+  id              Int           @id @default(autoincrement())
+  numero          String        @unique // Número de factura (ej: 01-00000125)
+  correlativo     Int           // Correlativo del CAI
+  cai             String        // CAI utilizado
+  fecha           DateTime      @default(now())
+  tipoCliente     String        // final, rtn, credito
+  subtotal        Float         @default(0)
+  descuento       Float         @default(0)
+  isv15           Float         @default(0)
+  isv18           Float         @default(0)
+  total           Float         @default(0)
+  medioPago       String        // EFECTIVO, TARJETA, etc.
+  sucursal        String?
+  codigoPV        String?
+  usuario         String?
+  turno           Turno?        @relation(fields: [turnoId], references: [id])
+  turnoId         Int?
+  mesaNumero      Int?          // Si es venta de mesa
+  tipoPedido      String?       // mesa, delivery, pickup, barra
+  clienteNombre   String?
+  clienteTelefono String?
+  clienteRTN      String?
+  direccion       String?       // Para delivery
+  proveedor       String?       // Para delivery
+  observaciones   String?
+  estado          String        @default("activa") // activa, anulada, reembolso
+  fechaAnulacion  DateTime?
+  motivoAnulacion String?
+  usuarioAnulacion String?
+  
+  // Relaciones
+  items           FacturaItem[]
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@map("facturas")
+}
+
+model FacturaItem {
+  id              Int       @id @default(autoincrement())
+  facturaId       Int
+  codigoProducto  String
+  descripcion     String
+  cantidad        Int
+  precioUnitario  Float
+  subtotal        Float
+  descuento       Float       @default(0)
+  impuesto        Float       @default(0)
+  total           Float
+  notas           String?
+  
+  // Relaciones
+  factura         Factura    @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime   @default(now())
+  
+  @@map("factura_items")
+}
+
+// =====================================================
 // TABLAS DE INVENTARIO COMPATIBLES CON BUSINESS CENTRAL
 // =====================================================
 
@@ -203,6 +268,8 @@ model Item {
   bomComponents         BOMComponent[]      @relation("ParentItem")
   bomComponentOf        BOMComponent[]      @relation("ComponentItem")
   purchaseLines         PurchaseLine[]
+  salesLines            SalesLine[]
+  journalLines          ItemJournalLine[]
   
   @@map("items")
 }
@@ -726,4 +793,34 @@ model Customer {
   salesHeaders          SalesHeader[]
   
   @@map("customers")
+}
+
+// =====================================================
+// MODELO DE TURNOS PARA CONTROL DE CAJA
+// =====================================================
+
+model Turno {
+  id              Int       @id @default(autoincrement())
+  numero          Int       // Número secuencial del turno
+  fechaApertura   DateTime  @default(now())
+  fechaCierre     DateTime?
+  horaApertura    String    // HH:MM
+  horaCierre      String?   // HH:MM
+  montoApertura   Float     @default(0)
+  montoCierre     Float?
+  ventasDelTurno  Float     @default(0)
+  usuarioApertura String
+  usuarioCierre   String?
+  estado          String    @default("abierto") // abierto, cerrado, anulado
+  observaciones   String?
+  sucursal        String?
+  codigoPV        String?
+  
+  // Relaciones
+  facturas        Factura[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("turnos")
 } 
